@@ -4,7 +4,6 @@ defmodule Rbtree.Node do
     depth: 1,
     key: nil,
     value: nil,
-    size: nil,
     left: nil,
     right: nil
   )
@@ -31,10 +30,13 @@ defmodule Rbtree do
   alias Rbtree.Node
   alias Rbtree.Leaf
 
-
   @key_hash_bucket 4294967296
 
-  defstruct node: nil, comparator: &__MODULE__.compare_items/2
+  defstruct(
+    size: 0,
+    node: Leaf,
+    comparator: &__MODULE__.compare_items/2
+  )
 
   # Attributes
 
@@ -49,24 +51,32 @@ defmodule Rbtree do
   def height(%Rbtree{node: %Node{depth: h}}), do: h
 
   # Create
+  def new(), do: empty()
+  def new(k, v), do: from_list([{k, v}])
+  def new(list) when is_list(list), do: from_list(list)
+
 
   def empty do
     %Rbtree{node: Leaf}
   end
 
-  def singleton key do
+  def singleton(key), do:
+    singleton(key, nil)
+
+  def singleton(key, value), do:
     %Rbtree{node: %Node{
         color: :black,
         depth: 1,
         key: key,
+        value: value,
         left: Leaf,
         right: Leaf
       }
     }
-  end
 
+  def size(%Rbtree{size: size}), do: size
 
-  def from_list list do
+  def from_list(list) when is_list(list) do
     Enum.reduce(list, empty(), fn(i, set) ->
       case i do
         {k, v} ->
@@ -77,9 +87,9 @@ defmodule Rbtree do
     end)
   end
 
-  # def to_map(tree) do
-  #   tree |> to_list |> Enum.into(%{})
-  # end
+  def to_map(tree) do
+    tree |> to_list |> Enum.into(%{})
+  end
 
   def to_list(tree, acc \\ [])
   def to_list(%Rbtree{node: Leaf}, acc), do: acc
@@ -93,7 +103,7 @@ defmodule Rbtree do
       _ ->
         do_to_list(l, do_to_list(r, acc) ++ [{k,v}])
     end
-    
+
   end
 
   def member?(%Rbtree{node: Leaf}, _key), do: false
@@ -179,10 +189,10 @@ defmodule Rbtree do
 #--------------------------------------------------------------
   # to_string
 
-  def to_string(%Rbtree{node: tree}) , do: do_to_string "", tree
+  def to_string(%Rbtree{node: tree, size: size}) , do: "\n(size:" <> Integer.to_string(size) <> ")\n" <> do_to_string "", tree
   def do_to_string(_, Leaf), do: "\n"
   def do_to_string(pref, %Node{color: c, depth: h, key: k, value: v, left: l, right: r}), do:
-       Atom.to_string(c) <> " { " <> Kernel.inspect(k) <> ", " <> Kernel.inspect(v) <> " }("
+       Atom.to_string(c) <> " { " <> Kernel.inspect(k) <> ", " <> Kernel.inspect(v) <> " }(d:"
        <> Integer.to_string(h) <> ")\n"
     <> pref <> "+ " <> do_to_string(("  " <> pref), l)
     <> pref <> "+ " <> do_to_string(("  " <> pref), r)
@@ -203,8 +213,10 @@ defmodule Rbtree do
   #  Chris Okasaki
 
   def insert(tree, k), do: insert(tree, k, nil)
-  def insert(%Rbtree{node: node, comparator: cp}, k, v), do:
-    %Rbtree{node: turn_black(do_insert(node, k, v, cp))}
+  def insert(%Rbtree{node: node, comparator: cp, size: size}, k, v) do
+    new_size = if do_member?(node, k, cp) do size else size + 1 end
+    %Rbtree{size: new_size, node: turn_black(do_insert(node, k, v, cp))}
+  end
 
   defp do_insert(Leaf, key, val, _cp), do:
     %Node{
@@ -245,7 +257,8 @@ defmodule Rbtree do
         key: y,
         value: yv,
         right: c},
-        z, d, xv), do:
+        z, d, zv), do:
+
     %Node{
       color: :red,
       depth: h+1,
@@ -263,22 +276,23 @@ defmodule Rbtree do
         depth: h,
         left: c,
         key: z,
-        value: xv,
+        value: zv,
         right: d}}
 
   defp do_balance_left(h, %Node{
-    color: :red, 
-    left: a, 
-    key: x, 
-    value: xv, 
+    color: :red,
+    left: a,
+    key: x,
+    value: xv,
     right: %Node{
-      color: :red, 
-      left: b, 
-      key: y, 
-      value: yv, 
-      right: c}},z ,d, xv), do:
+      color: :red,
+      left: b,
+      key: y,
+      value: yv,
+      right: c}},z ,d, zv), do:
+
     %Node{
-      color: :red, 
+      color: :red,
       depth: h+1,
       left: %Node{
         color: :black,
@@ -287,15 +301,15 @@ defmodule Rbtree do
         key: x,
         value: xv,
         right: b},
-        key: y,
-        value: yv,
-        right: %Node{
-          color: :black,
-          depth: h,
-          left: c,
-          key: z,
-          value: xv,
-          right: d}}
+      key: y,
+      value: yv,
+      right: %Node{
+        color: :black,
+        depth: h,
+        left: c,
+        key: z,
+        value: zv,
+        right: d}}
 
   defp do_balance_left(h, l, x, r, xv), do:
     %Node{color: :black, depth: h, left: l, key: x, value: xv, right: r}
@@ -311,14 +325,15 @@ defmodule Rbtree do
         key: x,
         value: xv,
         right: b},
-        key: y, value: yv,
-        right: %Node{
-          color: :black,
-          depth: h,
-          left: c,
-          key: z,
-          value: zv,
-          right: d}}
+      key: y,
+      value: yv,
+      right: %Node{
+        color: :black,
+        depth: h,
+        left: c,
+        key: z,
+        value: zv,
+        right: d}}
 
   defp do_balance_right(h, a, x, %Node{
     color: :red,
@@ -341,8 +356,8 @@ defmodule Rbtree do
            key: x,
            value: xv,
            right: b},
-           key: y,
-           value: yv,
+        key: y,
+        value: yv,
         right: %Node{
           color: :black,
            depth: h,
@@ -350,6 +365,7 @@ defmodule Rbtree do
            key: z,
            value: zv,
            right: d}}
+
   defp do_balance_right(h, l, x, r, xv), do:
     %Node{color: :black, depth: h, left: l, key: x, value: xv, right: r}
 
@@ -420,9 +436,9 @@ defmodule Rbtree do
     key: rx, value: rxv, right: rr}, false}
 
   def delete_min(%Rbtree{node: Leaf}), do: empty()
-  def delete_min(%Rbtree{node: t}) do
+  def delete_min(%Rbtree{node: t, size: size}) do
     {{s, _}, _} = do_delete_min t
-    do_turn_black s
+    %Rbtree{node: do_turn_black(s), size: size - 1}
   end
 
   defp do_delete_min(Leaf), do: throw("error")
@@ -447,9 +463,9 @@ defmodule Rbtree do
 # ----------------------------------------------------------------
 
   def delete_max(%Rbtree{node: Leaf}), do: empty()
-  def delete_max(%Rbtree{node: t}) do
+  def delete_max(%Rbtree{node: t, size: size}) do
     {{s, _},_} = do_delete_max t
-    do_turn_black s
+    %Rbtree{node: do_turn_black(s), size: size - 1}
   end
 
   defp do_delete_max(Leaf), do: throw("do_delete_max")
@@ -478,9 +494,10 @@ defmodule Rbtree do
 
 # ----------------------------------------------------------------
 
-  def delete(%Rbtree{node: t, comparator: cp}, x) do
+  def delete(%Rbtree{node: t, comparator: cp, size: size}, x) do
+    new_size = if do_member?(t, x, cp) do size else size - 1 end
     {s, _} = do_delete(x, cp, t)
-    do_turn_black s
+    %Rbtree{node: do_turn_black(s), size: new_size}
   end
 
   defp do_delete(_, _cp, Leaf), do: {Leaf, false}
