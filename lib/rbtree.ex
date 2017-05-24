@@ -77,8 +77,8 @@ defmodule Rbtree do
     end
   end
 
-  ##################################
-  # Internals
+#--------------------------------------------------------------
+# Internals
 
   defp is_balanced? n do
     (is_black_same n) && (is_red_separate n)
@@ -135,7 +135,7 @@ defmodule Rbtree do
   defp turn_black_with_leaf(Leaf), do: Leaf
   defp turn_black_with_leaf(node), do: turn_black(node)
 
-  #############
+#--------------------------------------------------------------
 
   def minimum(%Node{left: Leaf, key: k, value: v}), do: {k, v}
   def minimum(%Node{left: l}), do: minimum(l)
@@ -143,7 +143,7 @@ defmodule Rbtree do
   def maximum(%Node{right: Leaf, key: k, value: v}), do: {k, v}
   def maximum(%Node{right: l}), do: maximum(l)
 
-  #############
+#--------------------------------------------------------------
   # to_string
 
   def to_string(%Rbtree{node: tree}) , do: do_to_string "", tree
@@ -153,18 +153,18 @@ defmodule Rbtree do
     <> pref <> "+ " <> do_to_string(("  " <> pref), l)
     <> pref <> "+ " <> do_to_string(("  " <> pref), r)
 
-  #############
+#--------------------------------------------------------------
   defp is_red(%Node{color: :red}), do: true
   defp is_red(_), do: false
-  #############
+#--------------------------------------------------------------
 
   defp valid tree do
     is_balanced(tree) && black_height(tree) && is_ordered(tree)
   end
 
-  #####################################################################
+#--------------------------------------------------------------
   ## Basic Operations
-  #####################################################################
+#--------------------------------------------------------------
   ## Insertion
   #  Chris Okasaki
 
@@ -223,7 +223,7 @@ defmodule Rbtree do
   # _ "whitespace"
   #   = [ \t\n\r]*
 
-  ########################################
+#--------------------------------------------------------------
 
   defp balance_left(:black, h, %Node{color: :red, depth: _, left: %Node{color: :red, depth: _, left: a, value: x, right: b}, value: y, right: c}, y, c), do:
     %Node{color: :red, depth: h+1, left: %Node{color: :black, depth: h, left: a, value: x, right: b}, value: y, right: %Node{color: :black, depth: h, left: c, value: z, right: d}}
@@ -239,9 +239,75 @@ defmodule Rbtree do
   defp balance_right(k, h, l, x, r), do:
     %Node{color: k, depth: h, left: l, value: x, right: r}
 
-  # TODO: unbalancedL
+# ----------------------------------------------------------------
 
-  ###################
+  defp unbalanced_left(c, h, %Node{color: :black}=l, x, r), do:
+    {balance_left(:black, h, (turn_red l), x, r), (c == :black)}
+  defp unbalanced_left(:black, h, %Node{color: :red, depth: lh, left: ll, value: lx, %Node{color: :black}=lr}, x, r), do:
+    {%Node{color: :black, depth: lh, left: ll, value: lx, right: balance_left(:black, h, turn_red(lr), x, r)}, false}
+
+  defp unbalanced_right(c, h ,l ,x ,%Node{color: :black}=r), do:
+    {balance_right(:black, h, l, x, turn_red(r)), c == :black}
+  defp unbalanced_right(:black, h, l, x, %Node{color: :red, depth: rh, left:%Node{color: :black}=rl, value: rx, right: rr}), do:
+    {%Node{color: :black, depth: rh, left: balance_right(:black, h, l, x, turn_red(rl)), value: rx, right: rr}, false}
+
+  def delete_min(%Rbtree{node: Leaf}), do: empty
+  def delete_min(%Rbtree{node: t}) do
+    {{s,_},_} = do_delete_min t
+    do_turn_black s
+  end
+
+  defp do_delete_min(Leaf), do: throw("error")
+  defp do_delete_min(%Node{color: :black, left: Leaf, value: x, right: Leaf}), do:
+    {{Leaf, true}, x}
+  defp do_delete_min(%Node{color: :black, left: Leaf, value: x, right: %Node{color: :red}=r}}), do:
+    {{turn_black(r), false}, x}
+  defp do_delete_min(%Node{color: :red, left: Leaf, value: x, right: r}), do:
+    {{r, false}, x}
+  defp do_delete_min(%Node{color: c, depth: h, left: l, value: x, right: r}) do
+    {{do_l, d}, m} = do_delete_min l
+    tD = unbalanced_right(c, (h-1), do_l, x, r)
+    do_tD = { %Node{color: c, depth: h, left: do_l, value: x, right: r}, false}
+    if d do
+      {tD, m}
+    else
+      {do_tD, m}
+    end
+  end
+
+# ----------------------------------------------------------------
+
+  def delete_max(%Rbtree{node: Leaf}), do: empty()
+  def delete_max(%Rbtree{node: t}) do
+    {{s, _},_} = do_delete_max t
+    do_turn_black s
+  end
+
+  defp do_delete_max(Leaf), do: throw("do_delete_max")
+  defp do_delete_max(%Node{color: :black, left: Leaf, value: x, right: Leaf}), do:
+    {{Leaf, true}, x}
+  defp do_delete_max(%Node{color: :black, left: %Node{color: :red}, value: x, right: Leaf}}), do:
+    {{turn_black(l), false}, x}
+  defp do_delete_max(%Node{color: :red, left: l, value: x, right: Leaf}), do:
+    {{l, false}, x}
+  defp do_delete_max(%Node{color: c, depth: h, left: l, value: x, right: r}) do
+    {{do_r, d}, m} = do_delete_max r
+    tD  = unbalancedL(c, (h-1), l, x, do_r) 
+    do_tD = {%Node{color: c, depth: h, left: l, value: x, right: do_r}, false}
+    if d do
+      {tD, m}
+    else
+      {do_tD, m}
+    end
+  end
+
+# ----------------------------------------------------------------
+
+  defp blackify(%Node{color: :red}=s), do: {turn_black(s), false}
+  defp blackify(s), do: {s, true}
+
+# ----------------------------------------------------------------
+
   # Comparator
   def compare_items(term1, term2) do
     cond do
