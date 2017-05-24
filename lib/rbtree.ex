@@ -83,13 +83,17 @@ defmodule Rbtree do
 
   def to_list(tree, acc \\ [])
   def to_list(%Rbtree{node: Leaf}, acc), do: acc
-  def to_list(%Rbtree{node: node}, acc) do
-    do_to_list(node, acc)
-  end
+  def to_list(%Rbtree{node: node}, acc), do: do_to_list(node, acc)
 
   defp do_to_list(Leaf, acc), do: acc
-  defp do_to_list(%Node{left: l, key: k, right: r}, acc) do
-    do_to_list(l, do_to_list(r, acc) ++ [k])
+  defp do_to_list(%Node{left: l, key: k, value: v, right: r}, acc) do
+    case v do
+      nil ->
+        do_to_list(l, do_to_list(r, acc) ++ [k])
+      _ ->
+        do_to_list(l, do_to_list(r, acc) ++ [{k,v}])
+    end
+    
   end
 
   def member?(%Rbtree{node: Leaf}, _key), do: false
