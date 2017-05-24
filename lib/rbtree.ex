@@ -30,11 +30,12 @@ defmodule Rbtree do
     %Rbtree{node: Leaf}
   end
 
-  def singleton key do
+  def singleton key, val do
     %Rbtree{node: %Node{
         color: :black,
         depth: 1,
         key: key,
+        value: val,
         size: 1,
         left: Leaf,
         right: Leaf
@@ -44,14 +45,14 @@ defmodule Rbtree do
 
 
   def from_list list do
-    Enum.reduce(list, empty(), fn(k, set) ->
-      insert(set, k)
+    Enum.reduce(list, empty(), fn({k,v}, set) ->
+      insert(set, k, v)
     end)
   end
 
-  # def to_map(tree) do
-  #   tree |> to_list |> Enum.into(%{})
-  # end
+  def to_map(tree) do
+    tree |> to_list |> Enum.into(%{})
+  end
 
   def to_list(tree, acc \\ [])
   def to_list(%Rbtree{node: Leaf}, acc), do: acc
@@ -60,8 +61,8 @@ defmodule Rbtree do
   end
 
   defp do_to_list(Leaf, acc), do: acc
-  defp do_to_list(%Node{left: l, key: k, right: r}, acc) do
-    do_to_list(l, do_to_list(r, acc) ++ [k])
+  defp do_to_list(%Node{left: l, value: v, key: k, right: r}, acc) do
+    do_to_list(l, do_to_list(r, acc) ++ [{k, v}])
   end
 
   def member?(%Rbtree{node: Leaf}, _key), do: false
@@ -138,10 +139,10 @@ defmodule Rbtree do
 
 #--------------------------------------------------------------
 
-  def minimum(%Node{left: Leaf, key: k}), do: k
+  def minimum(%Node{left: Leaf, key: k, value: v}), do: {k, v}
   def minimum(%Node{left: l}), do: minimum(l)
 
-  def maximum(%Node{right: Leaf, key: k}), do: k
+  def maximum(%Node{right: Leaf, key: k, value: v}), do: {k, v}
   def maximum(%Node{right: l}), do: maximum(l)
 
 #--------------------------------------------------------------
@@ -149,8 +150,8 @@ defmodule Rbtree do
 
   def to_string(%Rbtree{node: tree}) , do: do_to_string "", tree
   def do_to_string(_, Leaf), do: "\n"
-  def do_to_string(pref, %Node{color: c, depth: h, key: k, left: l, right: r}), do:
-       Atom.to_string(c) <> " {" <> Kernel.inspect(k) <> "}(" <> Integer.to_string(h) <> ")\n"
+  def do_to_string(pref, %Node{color: c, depth: h, key: k, value: v, left: l, right: r}), do:
+       Atom.to_string(c) <> " {" <> Kernel.inspect(k) <> ", " <> Kernel.inspect(v) <> "}(" <> Integer.to_string(h) <> ")\n"
     <> pref <> "+ " <> do_to_string(("  " <> pref), l)
     <> pref <> "+ " <> do_to_string(("  " <> pref), r)
 
@@ -169,29 +170,29 @@ defmodule Rbtree do
   ## Insertion
   #  Chris Okasaki
 
-  def insert(%Rbtree{node: node, comparator: cp}, k), do: %Rbtree{node: turn_black(do_insert(node, k, cp))}
-
-  defp do_insert(Leaf, key, _cp), do:
+  def insert(%Rbtree{node: node, comparator: cp}, k, v), do: %Rbtree{node: turn_black(do_insert(node, k, v, cp))}
+  defp do_insert(Leaf, key, val, _cp), do:
     %Node{
       color: :red,
       depth: 1,
       key: key,
+      value: val,
       size: 1,
       left: Leaf,
       right: Leaf
     }
-  defp do_insert(%Node{color: :black, depth: h, left: l, right: r, key: k}=t, kx, cp) do
+  defp do_insert(%Node{color: :black, depth: h, left: l, right: r, key: k}=t, kx, val, cp) do
     case cp.(kx, k) do
        0 -> t
-      -1 -> do_balance_left(h, do_insert(l, kx, cp), kx, r)
-       1 -> do_balance_right(h, l, k, do_insert(r, kx, cp))       
+      -1 -> do_balance_left(h, do_insert(l, kx, val, cp), kx, r)
+       1 -> do_balance_right(h, l, k, do_insert(r, kx, val, cp))       
     end
   end
-  defp do_insert(%Node{color: :red, depth: h, left: l, right: r, key: k}=t, kx, cp) do
+  defp do_insert(%Node{color: :red, depth: h, left: l, right: r, key: k, value: v}=t, kx, val, cp) do
     case cp.(kx, k) do
        0 -> t
-      -1 -> %Node{color: :red, depth: h, left: do_insert(l, kx, cp), right: r, key: k}
-       1 -> %Node{color: :red, depth: h, left: l, right: do_insert(r, kx, cp), key: k}
+      -1 -> %Node{color: :red, depth: h, left: do_insert(l, kx, val, cp), right: r, key: k, value: v}
+       1 -> %Node{color: :red, depth: h, left: l, right: do_insert(r, kx, val, cp), key: k, value: v}
     end
   end
 
@@ -345,34 +346,34 @@ defmodule Rbtree do
 # -- Set operations
 # ----------------------------------------------------------------
 
-  def join(Leaf, k, t2), do: insert(k, t2)
-  def join(t1, k, Leaf), do: insert(k, t1)
-  def join(t1, k, t2) do
+  def join(Leaf, t2, k, v), do: insert(k, v, t2)
+  def join(t1, Leaf, k, v), do: insert(k, v, t1)
+  def join(t1, t2, k, v) do
     h1 = height t1
     h2 = height t2
     cond do
       h1 == h2 ->
-        %Node{color: :black, depth: h1+1, left: t1, key: k, right: t2}
+        %Node{color: :black, depth: h1+1, left: t1, key: k, value: v, right: t2}
       h1 < h2 ->
-        join_lt(t1, k, t2, h1) |> turn_black
+        join_gt(t1, k, v, t2, h2) |> turn_black
       h1 > h2 ->
-        join_gt(t1, k, t2, h2) |> turn_black
+        join_lt(t1, k, v, t2, h1) |> turn_black
     end
   end
 
-  defp join_lt(t1, k, %Node{color: c, depth: h, left: l, key: x, right: r}=t2, h1) do
+  defp join_lt(t1, k, v, %Node{color: c, depth: h, left: l, key: x, right: r}=t2, h1) do
     if h == h1 do
-      %Node{color: :red, depth: h+1, left: t1, key: k, right: t2}
+      %Node{color: :red, depth: h+1, left: t1, key: k, value: v, right: t2}
     else
-      balance_left(c, h, (join_lt(t1, k, l, h1)), x, r)
+      balance_left(c, h, (join_lt(t1, k, v, l, h1)), x, r)
     end
   end
 
-  defp join_gt(%Node{color: c, depth: h, left: l, key: x, right: r}=t1, k, t2, h2) do
+  defp join_gt(%Node{color: c, depth: h, left: l, key: x, right: r}=t1, k, v, t2, h2) do
     if h == h2 do
-      %Node{color: :red, depth: h+1, left: t1, key: k, right: t2}
+      %Node{color: :red, depth: h+1, left: t1, key: k, value: v, right: t2}
     else
-      balance_right(c, h, l, x, (join_gt(r, k, t2, h2)))
+      balance_right(c, h, l, x, (join_gt(r, k, v, t2, h2)))
     end
   end
 
@@ -414,24 +415,24 @@ defmodule Rbtree do
     do_h2 = height do_t2
     %Node{color: :red, left: rl, key: rx, right: rr} = r
     cond do
-      h == do_h2 -> %Node{color: :red, depth: h+1, left: t1, key: m, right: do_t2}
-      is_red l   -> %Node{color: :red, depth: h+1, left: (turn_black l), key: x, right: %Node{color: :black, depth: h, left: r, key: m, right: do_t2}}
-      is_red r   -> %Node{color: :black, depth: h, left: %Node{color: :red, depth: h, left: l, key: x, right: rl}, key: rx, right: %Node{color: :red, depth: h, left: rr, key: m, right: do_t2}}
-      true       -> %Node{color: :black, depth: h, left: (turn_red t1), key: m, right: do_t2}
+      h == do_h2 -> %Node{color: :red, depth: h+1, left: t1, value: m, right: do_t2}
+      is_red l   -> %Node{color: :red, depth: h+1, left: (turn_black l), value: x, right: %Node{color: :black, depth: h, left: r, value: m, right: do_t2}}
+      is_red r   -> %Node{color: :black, depth: h, left: %Node{color: :red, depth: h, left: l, value: x, right: rl}, value: rx, right: %Node{color: :red, depth: h, left: rr, value: m, right: do_t2}}
+      true       -> %Node{color: :black, depth: h, left: (turn_red t1), value: m, right: do_t2}
     end
   end
 
 # ----------------------------------------------------------------
 
   def split(_, Leaf), do: {Leaf, Leaf}
-  def split(kx, %Node{left: l, key: k, right: r}) do
+  def split(kx, %Node{left: l, key: k, value: v, right: r}) do
     cond do
       kx < k ->
         {lt, gt} = split(kx, l)
-        {lt, join(gt, k, r |> turn_black)}
+        {lt, join(gt, k, v, r |> turn_black)}
       kx > k ->
         {lt, gt} = split(kx, r)
-        {join((l |> turn_black), k, lt), gt}
+        {join((l |> turn_black), k, v, lt), gt}
       kx == k ->
         {l |> turn_black, r |> turn_black}
     end
@@ -441,17 +442,17 @@ defmodule Rbtree do
 
   def union(t1, Leaf), do: t1
   def union(Leaf, t2), do: turn_black(t2)
-  def union(t1, %Node{left: l, key: k, right: r}) do
-    {do_l, do_r} = split(k, t1)
-    join((union do_l, l), k, (union do_r, r))
+  def union(t1, %Node{left: l, key: x, value: v, right: r}) do
+    {do_l, do_r} = split(x, t1)
+    join((union do_l, l), x, v, (union do_r, r))
   end
 # ----------------------------------------------------------------
   def intersection(Leaf, _), do: Leaf
   def intersection(_, Leaf), do: Leaf
-  def intersection(t1, %Node{left: l, key: k, right: r}) do
-    {do_l,do_r} = split(k,t1)
-    if (member?(k, t1)) do
-      join((intersection do_l, l), k, (intersection do_r, r))
+  def intersection(t1, %Node{left: l, key: x, value: v, right: r}) do
+    {do_l,do_r} = split(x,t1)
+    if (member?(x, t1)) do
+      join((intersection do_l, l), x, v, (intersection do_r, r))
     else
       merge((intersection do_l, l), (intersection do_r, r))
     end
@@ -459,8 +460,8 @@ defmodule Rbtree do
 # ----------------------------------------------------------------
   def difference(Leaf, _), do: Leaf
   def difference(t1, Leaf), do: t1
-  def difference(t1, %Node{left: l, key: k, right: r}) do
-    {do_l, do_r} = split k, t1
+  def difference(t1, %Node{left: l, key: x, right: r}) do
+    {do_l, do_r} = split x, t1
     merge((difference(do_l, l)), (difference(do_r, r)))
   end
 
