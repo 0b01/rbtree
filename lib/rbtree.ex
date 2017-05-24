@@ -1,3 +1,27 @@
+defmodule Rbtree.Node do
+  defstruct(
+    color: :black,
+    depth: 1,
+    key: nil,
+    value: nil,
+    size: nil,
+    left: nil,
+    right: nil
+  )
+
+  def new(key, depth \\ 1) do
+    %__MODULE__{key: key, depth: depth}
+  end
+
+  def color(%__MODULE__{}=node, color) do
+    %__MODULE__{ node | color: color}
+  end
+end
+
+defmodule Rbtree.Leaf do
+  defstruct([nil])
+end
+
 defmodule Rbtree do
   @moduledoc """
     Author: Ricky Han<rickylqhan@gmail.com>
@@ -117,7 +141,7 @@ defmodule Rbtree do
   # def do_ordered([x | [y |_xys]=xs], cp, true), do: do_ordered(xs, cp, cp.(x,y) < 1)
 
   # Alt version
-  def ordered?(enum), do: ordered?(enum, &>=/2)
+  def ordered?(tree), do: tree |> to_list |> ordered?(&compare_items/2)
   def ordered?([], _fun), do: true
   def ordered?(enum, fun) do
     match?({_}, Enum.reduce_while(enum, :start, &do_ordered?(&1, &2, fun)))
@@ -206,32 +230,122 @@ defmodule Rbtree do
     end
   end
 
-  defp do_balance_left(
-      h, %Node{color: :red, left:
-        %Node{color: :red, left: a, key: x, value: xv, right: b},
-        key: y, value: yv, right: c}, z, d, xv), do:
-    %Node{color: :red, depth: h+1, left:
-    %Node{color: :black, depth: h, left: a, key: x, value: xv, right: b}, key: y, value: yv,
-    right: %Node{color: :black, depth: h, left: c, key: z, value: xv, right: d}}
-  defp do_balance_left(h, %Node{color: :red, left: a, key: x, value: xv, right:
-    %Node{color: :red, left: b, key: y, value: yv, right: c}},z ,d, xv), do:
-    %Node{color: :red, depth: h+1,
-      left: %Node{color: :black, depth: h, left: a, key: x, value: xv, right: b}, key: y, value: yv,
-      right: %Node{color: :black, depth: h, left: c, key: z, value: xv, right: d}}
+  defp do_balance_left(h, %Node{
+        color: :red,
+        left: %Node{
+          color: :red,
+          left: a,
+          key: x,
+          value: xv,
+          right: b},
+        key: y,
+        value: yv,
+        right: c},
+        z, d, xv), do:
+    %Node{
+      color: :red,
+      depth: h+1,
+      left: %Node{
+        color: :black,
+        depth: h,
+        left: a,
+        key: x,
+        value: xv,
+        right: b},
+      key: y,
+      value: yv,
+      right: %Node{
+        color: :black,
+        depth: h,
+        left: c,
+        key: z,
+        value: xv,
+        right: d}}
+
+  defp do_balance_left(h, %Node{
+    color: :red, 
+    left: a, 
+    key: x, 
+    value: xv, 
+    right: %Node{
+      color: :red, 
+      left: b, 
+      key: y, 
+      value: yv, 
+      right: c}},z ,d, xv), do:
+    %Node{
+      color: :red, 
+      depth: h+1,
+      left: %Node{
+        color: :black,
+        depth: h,
+        left: a,
+        key: x,
+        value: xv,
+        right: b},
+        key: y,
+        value: yv,
+        right: %Node{
+          color: :black,
+          depth: h,
+          left: c,
+          key: z,
+          value: xv,
+          right: d}}
+
   defp do_balance_left(h, l, x, r, xv), do:
     %Node{color: :black, depth: h, left: l, key: x, value: xv, right: r}
 
   defp do_balance_right(h, a, x,
     %Node{color: :red, left: b, key: y, value: yv, right:
     %Node{color: :red, left: c, key: z, value: zv, right: d}}, xv), do:
-      %Node{color: :red, depth: h+1,
-        left: %Node{color: :black, depth: h, left: a, key: x, value: xv, right: b}, key: y, value: yv,
-        right: %Node{color: :black, depth: h, left: c, key: z, value: zv, right: d}}
-  defp do_balance_right(h, a, x, %Node{color: :red,
-    left: %Node{color: :red, left: b, key: y, value: yv, right: c}, key: z, value: zv, right: d},xv), do:
-      %Node{color: :red, depth: h+1,
-        left: %Node{color: :black, depth: h, left: a, key: x, value: xv, right: b}, key: y, value: yv,
-        right: %Node{color: :black, depth: h, left: c, key: z, value: zv, right: d}}
+      %Node{color: :red,
+      depth: h+1,
+      left: %Node{color: :black,
+        depth: h,
+        left: a,
+        key: x,
+        value: xv,
+        right: b},
+        key: y, value: yv,
+        right: %Node{
+          color: :black,
+          depth: h,
+          left: c,
+          key: z,
+          value: zv,
+          right: d}}
+
+  defp do_balance_right(h, a, x, %Node{
+    color: :red,
+    left: %Node{
+      color: :red,
+      left: b,
+      key: y,
+      value: yv,
+      right: c},
+      key: z,
+      value: zv,
+      right: d},xv), do:
+      %Node{
+        color: :red,
+        depth: h+1,
+        left: %Node{
+          color: :black,
+           depth: h,
+           left: a,
+           key: x,
+           value: xv,
+           right: b},
+           key: y,
+           value: yv,
+        right: %Node{
+          color: :black,
+           depth: h,
+           left: c,
+           key: z,
+           value: zv,
+           right: d}}
   defp do_balance_right(h, l, x, r, xv), do:
     %Node{color: :black, depth: h, left: l, key: x, value: xv, right: r}
 
@@ -308,17 +422,17 @@ defmodule Rbtree do
   end
 
   defp do_delete_min(Leaf), do: throw("error")
-  defp do_delete_min(%Node{color: :black, left: Leaf, key: x, value: xv, right: Leaf}), do:
+  defp do_delete_min(%Node{color: :black, left: Leaf, key: x, right: Leaf}), do:
     {{Leaf, true}, x}
-  defp do_delete_min(%Node{color: :black, left: Leaf, key: x, value: xv,
+  defp do_delete_min(%Node{color: :black, left: Leaf, key: x,
     right: %Node{color: :red}=r}), do:
     {{turn_black(r), false}, x}
-  defp do_delete_min(%Node{color: :red, left: Leaf, key: x, value: xv, right: r}), do:
+  defp do_delete_min(%Node{color: :red, left: Leaf, key: x, right: r}), do:
     {{r, false}, x}
-  defp do_delete_min(%Node{color: c, depth: h, left: l, key: x, value: xv, right: r}) do
+  defp do_delete_min(%Node{color: c, depth: h, left: l, key: x, right: r}) do
     {{do_l, d}, m} = do_delete_min l
     tD = unbalanced_right(c, (h-1), do_l, x, r)
-    do_tD = { %Node{color: c, depth: h, left: do_l, key: x, value: xv, right: r}, false}
+    do_tD = { %Node{color: c, depth: h, left: do_l, key: x, right: r}, false}
     if d do
       {tD, m}
     else
@@ -338,14 +452,14 @@ defmodule Rbtree do
   defp do_delete_max(%Node{color: :black, left: Leaf, key: x, value: xv, right: Leaf}), do:
     {{Leaf, true}, x}
   defp do_delete_max(%Node{color: :black,
-    left: %Node{color: :red}=l, key: x, value: xv, right: Leaf}), do:
+    left: %Node{color: :red}=l, key: x, right: Leaf}), do:
     {{turn_black(l), false}, x}
-  defp do_delete_max(%Node{color: :red, left: l, key: x, value: xv, right: Leaf}), do:
+  defp do_delete_max(%Node{color: :red, left: l, key: x, right: Leaf}), do:
     {{l, false}, x}
-  defp do_delete_max(%Node{color: c, depth: h, left: l, key: x, value: xv, right: r}) do
+  defp do_delete_max(%Node{color: c, depth: h, left: l, key: x, right: r}) do
     {{do_r, d}, m} = do_delete_max r
     tD  = unbalanced_left(c, (h-1), l, x, do_r)
-    do_tD = {%Node{color: c, depth: h, left: l, key: x, value: xv, right: do_r}, false}
+    do_tD = {%Node{color: c, depth: h, left: l, key: x, right: do_r}, false}
     if d do
       {tD, m}
     else
@@ -562,3 +676,5 @@ defimpl Inspect, for: Rbtree do
     concat ["#Rbtree<", Inspect.List.inspect(Rbtree.to_list(tree), opts), ">"]
   end
 end
+
+
