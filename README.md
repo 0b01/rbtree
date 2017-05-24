@@ -1,4 +1,6 @@
 # Rbtree
+[![Build Status](https://travis-ci.org/rickyhan/rbtree.svg?branch=master)](https://travis-ci.org/rickyhan/rbtree)
+[![Coverage Status](https://coveralls.io/repos/github/rickyhan/rbtree/badge.svg?branch=master)](https://coveralls.io/github/rickyhan/rbtree?branch=master)
 
 **TODO: Add description**
 
