@@ -3,6 +3,7 @@ defmodule Rbtree.Node do
     color: :black,
     depth: 1,
     key: nil,
+    value: nil,
     size: nil,
     left: nil,
     right: nil

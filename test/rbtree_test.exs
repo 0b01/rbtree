@@ -40,7 +40,7 @@ defmodule RbtreeTest do
   # end
 
   test "create a rbtree from list" do
-    tree = Rbtree.from_list(["a", "b", "ab", "c", "e", "f", "g", "d"])
+    tree = Rbtree.from_list([{"a","1"},{"b","2"},{"c","3"},{"d",4}])
     IO.puts tree|> Rbtree.to_string
     assert ordered?(tree |> to_list |> Enum.reverse)
   end
