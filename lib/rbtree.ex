@@ -35,7 +35,6 @@ defmodule Rbtree do
         color: :black,
         depth: 1,
         key: key,
-        size: 1,
         left: Leaf,
         right: Leaf
       }
@@ -178,26 +177,25 @@ defmodule Rbtree do
       color: :red,
       depth: 1,
       key: key,
-      size: 1,
       left: Leaf,
       right: Leaf
     }
   defp do_insert(
-      %Node{color: :black, depth: h, left: l, right: r, key: k}=t, kx, cp) do
-    case cp.(kx, k) do
+      %Node{color: :black, depth: h, left: l, right: r, key: x}=t, kx, cp) do
+    case cp.(kx, x) do
        0 -> t
-      -1 -> do_balance_left(h, do_insert(l, kx, cp), kx, r)
-       1 -> do_balance_right(h, l, k, do_insert(r, kx, cp))
+      -1 -> do_balance_left(h, do_insert(l, kx, cp), x, r)
+       1 -> do_balance_right(h, l, x, do_insert(r, kx, cp))
     end
   end
   defp do_insert(
-      %Node{color: :red, depth: h, left: l, right: r, key: k}=t, kx, cp) do
-    case cp.(kx, k) do
+      %Node{color: :red, depth: h, left: l, right: r, key: x}=t, kx, cp) do
+    case cp.(kx, x) do
        0 -> t
       -1 -> %Node{color: :red, depth: h,
-          left: do_insert(l, kx, cp), right: r, key: k}
+          left: do_insert(l, kx, cp), right: r, key: x}
        1 -> %Node{color: :red, depth: h,
-          left: l, right: do_insert(r, kx, cp), key: k}
+          left: l, right: do_insert(r, kx, cp), key: x}
     end
   end
 
@@ -219,14 +217,14 @@ defmodule Rbtree do
   defp do_balance_right(h, a, x,
     %Node{color: :red, left: b, key: y, right:
     %Node{color: :red, left: c, key: z, right: d}}), do:
-    %Node{color: :red, depth: h+1,
-      left: %Node{color: :black, depth: h, left: a, key: x, right: b}, key: y,
-      right: %Node{color: :black, depth: h, left: c, key: z, right: d}}
+      %Node{color: :red, depth: h+1,
+        left: %Node{color: :black, depth: h, left: a, key: x, right: b}, key: y,
+        right: %Node{color: :black, depth: h, left: c, key: z, right: d}}
   defp do_balance_right(h, a, x, %Node{color: :red,
     left: %Node{color: :red, left: b, key: y, right: c}, key: z, right: d}), do:
-    %Node{color: :red, depth: h+1,
-      left: %Node{color: :black, depth: h, left: a, key: x, right: b}, key: y,
-      right: %Node{color: :black, depth: h, left: c, key: z, right: d}}
+      %Node{color: :red, depth: h+1,
+        left: %Node{color: :black, depth: h, left: a, key: x, right: b}, key: y,
+        right: %Node{color: :black, depth: h, left: c, key: z, right: d}}
   defp do_balance_right(h, l, x, r), do:
     %Node{color: :black, depth: h, left: l, key: x, right: r}
 
