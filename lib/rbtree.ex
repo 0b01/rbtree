@@ -308,6 +308,161 @@ defmodule Rbtree do
 
 # ----------------------------------------------------------------
 
+  def delete(%Rbtree{node: t, comparator: cp}, x) do
+    {s,_} = do_delete(x, cp, t)
+    do_turn_black s
+  end
+
+  defp do_delete(_, cp, Leaf), do: {Leaf, false}
+  defp do_delete(x, cp, %Node{color:c, depth: h, left: l, value: y, right: r}) do
+    case cp.(x, y) do
+      -1 ->
+        {do_l, d} = do_delete(x, l)
+        t = %Node{color: c, depth: h, left: do_l, value: y, right: r}
+        if d do unbalanced_right(c, h-1, do_l, y, r) else {t, false} end
+       1 ->
+        {do_r, d} = do_delete(x, r)
+        t = %Node{color: c, depth: h, left: l, value: y, right: do_r}
+        if d do unbalanced_left(c, h-1, l, y, do_r) else {t, false} end
+       0 ->
+        case r do
+          Leaf ->
+              if c == :black do blackify l else {l, false} end
+            _  ->
+              {{do_r, d}, m} = do_delete_min r
+              t = %Node{color: c, depth: h, left: l, value: m, right: do_r}
+              if d do unbalanced_left(c, h-1, l, m, do_r) else {t, false}
+        end
+    end
+  end
+
+# ----------------------------------------------------------------
+
+
+# ----------------------------------------------------------------
+# -- Set operations
+# ----------------------------------------------------------------
+
+  def join(Leaf, g, t2), do: insert g, t2
+  def join(t1, g, Leaf), do: insert g, t1
+  def join(t1, g, t2) do
+    h1 = height t1
+    h2 = height t2
+    cond do
+      h1 == h2 ->
+        %Node{color: :black, depth: h1+1, left: t1, value: g, right: t2}
+      h1 < h2 ->
+        join_gt(t1, g, t2, h2) |> turn_black
+      h1 > h2 ->
+        join_lt(t1, g, t2, h1) |> turn_black
+    end
+  end
+
+  defp join_lt(t1, g, %Node{color: c, depth: h, left: l, value: x, right: r}=t2, h1) do
+    if h == h1 do
+      %Node{color: :red, depth: h+1, left: t1, value: g, right: t2}
+    else
+      balanceL(c, h, (joinLT t1, g, l, h1), x, r)
+    end
+  end
+
+  defp join_gt(%Node{color: c, depth: h, left: l, value: x, right: r}=t1, g, t2, h2) do
+    if h == h2 do
+      %Node{color: :red, depth: h+1, left: t1, value: g, right: t2}
+    else
+      balanceR(c, h, l, x, (joinGT r, g, t2, h2))
+    end
+  end
+
+
+# ----------------------------------------------------------------
+
+  def merge(Leaf, t2), do: t2
+  def merge(t1, Leaf), do: t1
+  def merge(t1, t2) do
+    h1 = height t1
+    h2 = height t2
+    cond do
+      h1 < h2 -> merge_lt(t1, t2, h1) |> turn_black
+      h1 == h2 -> merge_gt(t1, t2, h2) |> turn_black
+      h1 > h2 -> merge_eq(t1, t2) |> turn_black
+    end
+  end
+
+  defp merge_lt(t1, %Node{color: c, depth: h, left: l, value: x, right: r}=t2, h1) do
+    if h == h1 do
+      merge_eq t1, t2
+    else
+      balanceL (c, h, (mergeLT t1, l, h1), x, r)
+    end
+  end
+
+  defp merge_gt(%Node{color: c, depth: h, left: l, value: x, right: r}=t1, t2, h2) do
+    if h == h2 do
+      merge_eq t1, t2
+    else
+      balanceR(c, h, l, x, (mergeGT r, t2, h2))
+    end
+  end
+
+  defp merge_eq(Leaf, Leaf) = Leaf
+  defp merge_eq(%{depth: h, left: l, value: x, right: r}=t1, t2) do
+    m  = minimum t2
+    do_t2 = deleteMin t2
+    do_h2 = height do_t2
+    %Node{color: :red, left: rl, value: rx, right: rr} = r
+    cond do
+      h == do_h2 -> %Node{color: :red, depth: h+1, left: t,1, value: m, right: do_t2}
+      is_red l   -> %Node{color: :red, depth: h+1, left: turn_black l, value: x, right: %Node{color: :black, depth: h, left: r, value: m, right: do_t2}
+      is_red r   -> %Node{color: :black, depth: h, left: %Node{color: :red, depth: h, left: l, value: x, right: rl}, value: rx, right: %Node{color: :red, depth: h, left: r,r, value: m, right: do_t2}}
+      _          -> %Node{color: :black, depth: h, left: (turn_red t1), value: m, right: do_t2}
+    end
+  end
+
+# ----------------------------------------------------------------
+
+  def split(_, Leaf), do: {Leaf, Leaf}
+  def split(kx, %Node{left: l, value: x, right: r}) do
+    cond do
+      kx < x ->
+        {lt, gt} = split(kx, l)
+        {lt, join(gt, x, r |> turn_black))}
+      kx > x ->
+        {lt, gt} = split(kx, r)
+        {join ((l |> turn_black), x, lt), gt}
+      kx == x ->
+        {l |> turn_black, r |> turn_black}
+    end
+  end
+
+# ----------------------------------------------------------------
+
+  def union(t1, Leaf), do: t1
+  def union(Leaf, l2), do: t2 |> turn_black
+  def union(t1, %Node{left: l, value: x, right: r}) do
+    {do_l,do_r) = split x, t1
+    join((union do_l l), x, (union do_r r))
+  end
+# ----------------------------------------------------------------
+  def intersection(Leaf, _), do: Leaf
+  def intersection(_, Leaf), do: Leaf
+  def intersection(t1, %Node{left: l, value: x, right: r}) do
+    {do_l,do_r} = split(x,t1)
+    if (member x, t1) do
+      join ((intersection do_l, l), x, (intersection do_r, r))
+    else
+      merge (intersection do_l, l) (intersection do_r, r)
+  end
+# ----------------------------------------------------------------
+  def difference(Leaf, _), do: Leaf
+  def difference(t1, Leaf), do: t1
+  def difference(t1, %Node{left: l, value: x, right: r}) do
+    {do_l, do_r} = split x, t1
+    merge (difference do_l l), (difference do_r r)
+  end
+
+# ----------------------------------------------------------------
+# ----------------------------------------------------------------
   # Comparator
   def compare_items(term1, term2) do
     cond do
