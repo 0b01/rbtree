@@ -113,6 +113,33 @@ defmodule RbtreeTest do
     assert not Rbtree.has_key?(Rbtree.new([a: 1, b: 2]), :c)
   end
 
+  test "get range a..b" do
+    # tree = Rbtree.from_list(1..4 |> Enum.to_list)
+    # assert [{1, nil}] == tree |> range(0..0)
+    # assert nil == tree |> range(-1..0)
+    # assert nil == tree |> range(0..-1)
+    # assert nil == tree |> range(10..1)
+    # assert nil == tree |> range(0..100)
+    # assert [{1, nil},{2, nil}] == tree |> range(0..1)
+    # assert [{1, nil},{2, nil},{3,nil}] == tree |> range(0..2)
+    # assert [{1, nil},{2, nil},{3,nil},{4,nil}] == tree |> range(0..3)
+    # assert [{2, nil},{3,nil},{4,nil}] == tree |> range(1..3)
+
+    # tree = Rbtree.from_list(1..8 |> Enum.to_list)
+
+    for i <- 1..100 do
+      for j <- 1..10 do
+        if j > i do
+          tree = Rbtree.from_list( 1..j |> Enum.to_list )
+          left = i..j |> Enum.reduce([], fn i,acc ->  acc ++ [{i,nil}] end)
+          right = tree |> range((i-1)..(j-1))
+          assert left == right
+        end
+      end
+    end
+
+  end
+
 
   test "with a custom comparator" do
     comparison = fn (key1, key2) ->

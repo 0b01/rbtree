@@ -203,7 +203,31 @@ defmodule Rbtree do
 
 #--------------------------------------------------------------
 
-  def nth(%Rbtree{size: size}, n) when size < n+1 or n<0, do: nil
+  def range(%Rbtree{size: size}, a..b) when a > size - 1 or a < 0
+                                         or b > size - 1 or b < 0, do: nil
+  def range(%Rbtree{}=tree, a..b) when a == b, do: [nth(tree, a)]
+  def range(%Rbtree{node: r}, a..b), do: do_range(r, a, b)
+  defp do_range({_,h,k,v,l,r}=n, a, b) do
+    lc = left_count(h)
+    cond do
+      a == b && a == lc ->
+        [{k,v}]
+      a < lc && b < lc ->
+        do_range(l, a, b)
+      a > lc && b > lc ->
+        do_range(r, a-lc-1, b-lc-1)
+      a < lc && b > lc ->
+        do_range(l, a, lc - 1) ++ [{k,v}] ++ do_range(r, 0, b-lc-1)
+      a == lc && b > lc ->
+        [{k,v}] ++ do_range(r, 0, b-lc-1)
+      a < lc && b == lc ->
+        do_range(l, a, 0) ++ [{k,v}]
+    end
+  end
+
+#--------------------------------------------------------------
+
+  def nth(%Rbtree{size: size}, n) when n > size - 1 or n < 0, do: nil
   def nth(%Rbtree{node: r}, n), do: do_nth(r, n)
   defp do_nth({_,h,k,v,l,r}, n) do
     l_count = left_count(h)
