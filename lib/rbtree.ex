@@ -203,10 +203,27 @@ defmodule Rbtree do
 
 #--------------------------------------------------------------
 
-  def range(%Rbtree{size: size}, a..b) when a > size - 1 or a < 0
-                                         or b > size - 1 or b < 0, do: nil
+  def range(%Rbtree{size: size}, a..b) when a > size - 1
+                                         or b > size - 1, do: nil
   def range(%Rbtree{}=tree, a..b) when a == b, do: [nth(tree, a)]
-  def range(%Rbtree{node: r}, a..b), do: do_range(r, a, b)
+  def range(%Rbtree{node: r, size: size}, a..b)
+    when a < 0 and b < 0, do:
+      do_range(r, size + a, size + b)
+  def range(%Rbtree{node: r, size: size}, a..b)
+    when a < 0 and b >= 0 and b - (size + a) > 0, do:
+      do_range(r, size + a, b)
+  def range(%Rbtree{node: r, size: size}=tree, a..b)
+    when a < 0 and b >= 0 and b - (size + a) == 0, do:
+      [nth(tree, b)]
+  def range(%Rbtree{node: r, size: size}=tree, a..b)
+    when a < 0 and b == 0, do:
+      do_range(r, size + a, size - 1)
+  def range(%Rbtree{node: r, size: size}, a..b)
+    when a >= 0 and b < 0, do:
+      do_range(r, a, size + b)
+  def range(%Rbtree{node: r}, a..b)
+    when a >= 0 and b >= 0, do: do_range(r, a, b)
+
   defp do_range({_,h,k,v,l,r}=n, a, b) do
     lc = left_count(h)
     cond do
@@ -227,8 +244,9 @@ defmodule Rbtree do
 
 #--------------------------------------------------------------
 
-  def nth(%Rbtree{size: size}, n) when n > size - 1 or n < 0, do: nil
-  def nth(%Rbtree{node: r}, n), do: do_nth(r, n)
+  def nth(%Rbtree{size: size}, n) when n > size - 1 or size == 0, do: nil
+  def nth(%Rbtree{node: r, size: size}, n) when n < 0, do: do_nth(r, size + n)
+  def nth(%Rbtree{node: r}, n) when n >= 0, do: do_nth(r, n)
   defp do_nth({_,h,k,v,l,r}, n) do
     l_count = left_count(h)
     cond do

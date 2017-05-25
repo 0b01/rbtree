@@ -113,22 +113,44 @@ defmodule RbtreeTest do
     assert not Rbtree.has_key?(Rbtree.new([a: 1, b: 2]), :c)
   end
 
+  test "get the nth element from the tree" do
+    range = 1..10
+    tree = Rbtree.from_list(range |>  Enum.map(&({&1, &1})) |>Enum.to_list)
+    for i <- range do
+      assert tree |> nth(i-1) == {i,i}
+    end
+
+    # Incorrect index will always return nil
+    tree = Rbtree.from_list(1..10|>  Enum.map(&({&1, &1})) |>Enum.to_list)
+    assert tree |> nth(10) == nil
+    assert tree |> nth(0) == {1,1}
+    assert tree |> nth(1) == {2,2}
+    assert tree |> nth(-1) == {10,10}
+  end
+  
   test "get range a..b" do
-    # tree = Rbtree.from_list(1..4 |> Enum.to_list)
-    # assert [{1, nil}] == tree |> range(0..0)
-    # assert nil == tree |> range(-1..0)
-    # assert nil == tree |> range(0..-1)
-    # assert nil == tree |> range(10..1)
-    # assert nil == tree |> range(0..100)
-    # assert [{1, nil},{2, nil}] == tree |> range(0..1)
-    # assert [{1, nil},{2, nil},{3,nil}] == tree |> range(0..2)
-    # assert [{1, nil},{2, nil},{3,nil},{4,nil}] == tree |> range(0..3)
-    # assert [{2, nil},{3,nil},{4,nil}] == tree |> range(1..3)
+    tree = Rbtree.from_list(1..4 |> Enum.to_list)
+    assert [{1, nil}] == tree |> range(0..0)
+    assert [{4, nil}] == tree |> range(-1..0)
+    assert [{1, nil}, {2, nil}, {3, nil}, {4, nil}] == tree |> range(0..-1)
+    assert nil == tree |> range(10..1)
+    assert nil == tree |> range(0..100)
+    assert [{1, nil},{2, nil}] == tree |> range(0..1)
+    assert [{1, nil},{2, nil},{3,nil}] == tree |> range(0..2)
+    assert [{1, nil},{2, nil},{3,nil},{4,nil}] == tree |> range(0..3)
+    assert [{2, nil},{3,nil},{4,nil}] == tree |> range(1..3)
 
-    # tree = Rbtree.from_list(1..8 |> Enum.to_list)
+    k = 100
+    tree = Rbtree.from_list(1..k |> Enum.to_list)
+    assert 100 == tree |> size
+    assert tree |> range((-2)..(-1)) == [{99, nil}, {100, nil}]
 
-    for i <- 1..100 do
-      for j <- 1..10 do
+
+    # Comprehensive testing
+    x = 10
+    y = 10
+    for i <- 1..x do
+      for j <- 1..y do
         if j > i do
           tree = Rbtree.from_list( 1..j |> Enum.to_list )
           left = i..j |> Enum.reduce([], fn i,acc ->  acc ++ [{i,nil}] end)
@@ -199,19 +221,6 @@ defmodule RbtreeTest do
     end
   end
 
-  test "get the nth element from the tree" do
-    range = 1..10
-    tree = Rbtree.from_list(range |>  Enum.map(&({&1, &1})) |>Enum.to_list)
-    for i <- range do
-      assert tree |> nth(i-1) == {i,i}
-    end
 
-    # Incorrect index will always return nil
-    tree = Rbtree.from_list(1..1|>  Enum.map(&({&1, &1})) |>Enum.to_list)
-    assert tree |> nth(10) == nil
-    assert tree |> nth(1) == nil
-    assert tree |> nth(0) == {1,1}
-    assert tree |> nth(-1) == nil
-  end
 
 end
