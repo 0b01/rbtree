@@ -119,23 +119,23 @@ defmodule Rbtree do
   defp reds(_color, {c,_,_,_,l,r}), do:
     (reds c, l) && (reds c, r)
 
-  # def ordered?(tree, comparator \\ &<=/2)
-  # def ordered?(tree, cp), do: tree |> to_list |> do_ordered(cp)
-  # def do_ordered(l, cp \\ &<=/2, b \\ true)
-  # def do_ordered([], _cp, _b), do: true
-  # def do_ordered([_], _cp, _b), do: true
-  # def do_ordered(_, _cp, false), do: false
-  # def do_ordered([x | [y |_xys]=xs], cp, true), do: do_ordered(xs, cp, cp.(x,y) < 1)
+  def ordered?(tree, comparator \\ &<=/2)
+  def ordered?(tree, cp), do: tree |> to_list |> do_ordered(cp)
+  def do_ordered(l, cp \\ &<=/2, b \\ true)
+  def do_ordered([], _cp, _b), do: true
+  def do_ordered([_], _cp, _b), do: true
+  def do_ordered(_, _cp, false), do: false
+  def do_ordered([x | [y |_xys]=xs], cp, true), do: do_ordered(xs, cp, cp.(x,y) < 1)
 
-  # Alt version
-  def ordered?(tree), do: tree |> to_list |> ordered?(&compare_items/2)
-  def ordered?([], _fun), do: true
-  def ordered?(enum, fun) do
-    match?({_}, Enum.reduce_while(enum, :start, &do_ordered?(&1, &2, fun)))
-  end
+  # # Alt version
+  # def ordered?(tree), do: tree |> to_list |> ordered?(&compare_items/2)
+  # def ordered?([], _fun), do: true
+  # def ordered?(enum, fun) do
+  #   match?({_}, Enum.reduce_while(enum, :start, &do_ordered?(&1, &2, fun)))
+  # end
 
-  def do_ordered?(a, :start, _fun), do: {:cont, {a}}
-  def do_ordered?(a, {b}, fun), do: fun.(a, b) && {:cont, {a}} || {:halt, nil}
+  # def do_ordered?(a, :start, _fun), do: {:cont, {a}}
+  # def do_ordered?(a, {b}, fun), do: fun.(a, b) && {:cont, {a}} || {:halt, nil}
 
   defp black_height(nil), do: true
   defp black_height({:black,h,_,_,_,_}=t), do: do_black_height(t, h)
@@ -161,6 +161,7 @@ defmodule Rbtree do
 
 #--------------------------------------------------------------
 
+  def nth(%Rbtree{size: size}, n) when size < n+1 or n<0, do: nil
   def nth(%Rbtree{node: r}, n), do: do_nth(r, n)
   defp do_nth({_,h,k,v,l,r}, n) do
     l_count = left_count(h)

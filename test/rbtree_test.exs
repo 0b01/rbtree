@@ -57,12 +57,19 @@ defmodule RbtreeTest do
     end
   end
 
-  test "nth" do
-    range = 1..10000
+  test "get the nth element from the tree" do
+    range = 1..10
     tree = Rbtree.from_list(range |>  Enum.map(&({&1, &1})) |>Enum.to_list)
     for i <- range do
       assert tree |> nth(i-1) == {i,i}
     end
+
+    # Incorrect index will always return nil
+    tree = Rbtree.from_list(1..1|>  Enum.map(&({&1, &1})) |>Enum.to_list)
+    assert tree |> nth(10) == nil
+    assert tree |> nth(1) == nil
+    assert tree |> nth(0) == {1,1}
+    assert tree |> nth(-1) == nil
   end
 
 end
