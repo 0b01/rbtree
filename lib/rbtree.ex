@@ -153,11 +153,34 @@ defmodule Rbtree do
 
 #--------------------------------------------------------------
 
-  def minimum({_,_,k,v,nil,_}), do: {k,v}
+  def minimum({_,_,k,v,nil,_}), do: {k, v}
   def minimum({_,_,_,_,l,_}), do: minimum(l)
 
-  def maximum({_,_,k,_,_,nil}), do: k
+  def maximum({_,_,k,v,_,nil}), do: {k, v}
   def maximum({_,_,_,_,_,r}), do: maximum(r)
+
+#--------------------------------------------------------------
+
+  def nth(%Rbtree{node: r}, n), do: do_nth(r, n)
+  defp do_nth({_,h,k,v,l,r}, n) do
+    l_count = left_count(h)
+    cond do
+      l_count > n ->
+        case l do
+          nil -> {k,v}
+          _ -> do_nth(l, n)
+        end
+      l_count == n -> {k,v}
+      true ->
+        case r do
+          nil -> {k,v}
+          _ -> do_nth(r, n - l_count - 1)
+        end
+    end
+  end
+  defp left_count(1), do: 0
+  defp left_count(0), do: 0
+  defp left_count(h), do: :math.pow(2,h-1)-1 |> round
 
 #--------------------------------------------------------------
   # to_string

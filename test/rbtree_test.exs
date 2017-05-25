@@ -50,8 +50,19 @@ defmodule RbtreeTest do
 
 
   test "size" do
-    tree = Rbtree.from_list(1..20 |>  Enum.map(&({&1, &1})) |>Enum.to_list)
-    assert tree.size == size(tree)
+    for i <- 1..16 do
+      tree = Rbtree.from_list(1..i |>  Enum.map(&({&1, &1})) |>Enum.to_list)
+      # IO.puts tree |> Rbtree.to_string
+      assert tree.size == size(tree)
+    end
+  end
+
+  test "nth" do
+    range = 1..10000
+    tree = Rbtree.from_list(range |>  Enum.map(&({&1, &1})) |>Enum.to_list)
+    for i <- range do
+      assert tree |> nth(i-1) == {i,i}
+    end
   end
 
 end
