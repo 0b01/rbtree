@@ -6,7 +6,6 @@ defmodule RbtreeTest do
   doctest Rbtree
 
   test "should create empty tree" do
-    assert empty() == %Rbtree{node: nil}
     assert null?(empty())
     assert height(empty()) == 0
   end
@@ -20,7 +19,6 @@ defmodule RbtreeTest do
   end
 
   test "initializing a red black tree" do
-    assert %Rbtree{} == Rbtree.new
     assert 0 == Rbtree.new.size
     assert [3, 2, 1] == [1,2,3] |> Rbtree.new |> Rbtree.to_list
   end
@@ -92,24 +90,67 @@ defmodule RbtreeTest do
     assert false == singleton("new") |> member?("nw")
   end
 
-  test "deletion" do
-    tree = Rbtree.from_list(1..4 |> Enum.map(&Integer.to_string/1) |>Enum.to_list)
-    assert tree |> delete(1) |> delete(2) |> size == 2
+  # test "deletion" do
+  #   tree = Rbtree.from_list(1..4 |> Enum.map(&Integer.to_string/1) |>Enum.to_list)
+  #   assert tree |> delete(1) |> delete(2) |> size == 2
 
-    initial_tree = Rbtree.new([d: 1, b: 2, c: 3, a: 4])
-    assert 4 == initial_tree.size
-    pruned_tree = delete(initial_tree, :c)
+  #   initial_tree = Rbtree.new([d: 1, b: 2, c: 3, a: 4])
+  #   assert 4 == initial_tree.size
+  #   pruned_tree = delete(initial_tree, :c)
 
-    assert 3 == pruned_tree.size
-    IO.puts pruned_tree |> Rbtree.to_string
-    assert Enum.reverse([{:a, 4}, {:b, 2}, {:d, 1}]) == to_list pruned_tree
+  #   assert 3 == pruned_tree.size
+  #   assert Enum.reverse([{:a, 4}, {:b, 2}, {:d, 1}]) == to_list pruned_tree
 
-    assert 2 == delete(pruned_tree, :a).size
-    assert Enum.reverse([{:b, 2}, {:d, 1}]) == to_list delete(pruned_tree, :a)
+  #   assert 2 == delete(pruned_tree, :a).size
+  #   assert Enum.reverse([{:b, 2}, {:d, 1}]) == to_list delete(pruned_tree, :a)
 
-    assert [] == to_list delete new, :b
+  #   assert [] == to_list delete new(), :b
+  # end
 
 
+  test "has_key?" do
+    assert Rbtree.has_key?(Rbtree.new([a: 1, b: 2]), :b)
+    assert not Rbtree.has_key?(Rbtree.new([a: 1, b: 2]), :c)
+  end
+
+
+  test "with a custom comparator" do
+    comparison = fn (key1, key2) ->
+      cond do
+        key1 < key2 -> 1
+        key1 > key2 -> -1
+        true -> 0
+      end
+    end
+    tree = Rbtree.new([], comparator: comparison)
+    tree_as_list = tree
+      |> Rbtree.insert(1, 3)
+      |> Rbtree.insert(5, 1)
+      |> Rbtree.insert(3, 2)
+      |> Rbtree.to_list
+    assert [{5, 1}, {3, 2}, {1, 3}] == tree_as_list
+  end
+
+  test "implements Collectable" do
+    members = [d: 1, b: 2, f: 3, g: 4, c: 5, a: 6, e: 7]
+    tree1 = Enum.into(members, Rbtree.new)
+    tree2 = Rbtree.new(members)
+
+    # The trees won't be identical due to the comparator function
+    assert Rbtree.to_list(tree1) == Rbtree.to_list(tree2)
+  end
+
+  test "implements Access" do
+    tree = Rbtree.new([d: 1, b: 2, f: 3, g: 4, c: 5, a: 6, e: 7])
+    assert 1 == tree[:d]
+    assert 2 == tree[:b]
+    assert 3 == tree[:f]
+    assert 4 == tree[:g]
+
+    {6, %{tree: new_tree}} = get_and_update_in(%{tree: tree}, [:tree, :a], fn (prev) ->
+      {prev, prev * 2}
+    end)
+    assert 12 == Rbtree.get(new_tree, :a)
   end
 
   test "should put everything to list or map" do

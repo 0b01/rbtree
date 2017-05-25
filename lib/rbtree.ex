@@ -6,7 +6,7 @@ defmodule Rbtree do
 
     {color, depth, key, value, left, right}
   """
-
+  @behaviour Access
   @key_hash_bucket 4294967296
 
   defstruct(
@@ -34,11 +34,11 @@ defmodule Rbtree do
 
   # Create
   def new(), do: empty()
-  def new(k, v), do: from_list([{k, v}])
-  def new(list) when is_list(list), do: from_list(list)
+  def new(list, comparator \\ &compare_items/2)
+  def new(list, comparator) when is_list(list), do: from_list(list, comparator)
 
-  def empty do
-    %Rbtree{node: nil}
+  def empty(cp \\ &compare_items/2) do
+    %Rbtree{node: nil, comparator: cp}
   end
 
   def singleton(key), do:
@@ -48,8 +48,8 @@ defmodule Rbtree do
     %Rbtree{node: {:black, 1, key, value, nil, nil}}
 
 
-  def from_list(list) when is_list(list) do
-    Enum.reduce(list, empty(), fn(i, set) ->
+  def from_list(list, comparator \\ &compare_items/2) when is_list(list) do
+    Enum.reduce(list, empty(comparator), fn(i, set) ->
       case i do
         {k, v} ->
           insert(set, k, v)
@@ -59,6 +59,11 @@ defmodule Rbtree do
     end)
   end
 
+#--------------------------------------------------------------
+  def reduce(tree, acc, fun) do
+    Rbtree.to_list(tree)
+    |> Enum.reduce(acc, fun)
+  end
 #--------------------------------------------------------------
 
   def to_map(tree) do
@@ -75,6 +80,36 @@ defmodule Rbtree do
     do_to_list(l, do_to_list(r, acc) ++ [k])
   defp do_to_list({_,_,k,v,l,r}, acc), do:
     do_to_list(l, do_to_list(r, acc) ++ [{k,v}])
+
+#--------------------------------------------------------------
+
+  # For Access behavior
+  def fetch(tree, key) do
+    ret = get(tree, key)
+    if ret == nil do
+      :error
+    else
+      {:ok, ret}
+    end
+  end
+
+  def get_and_update(tree, key, fun) do
+    {get, update} = fun.(Rbtree.get(tree, key))
+    {get, Rbtree.insert(tree, key, update)}
+  end
+
+  def pop(tree, key) do
+    value = Rbtree.get(tree, key, :error)
+    new_tree = Rbtree.delete(tree, key)
+    {value, new_tree}
+  end
+
+  def get(tree, key, default) do
+    case fetch(tree, key) do
+      {:ok, val} -> val
+      :error -> default
+    end
+  end
 
 #--------------------------------------------------------------
 
@@ -223,14 +258,14 @@ defmodule Rbtree do
 
   defp do_insert(nil, key, val, _cp), do:
     {:red, 1, key, val, nil, nil}
-  defp do_insert({:black,h,k,v,l,r}=t, kx, vx, cp) do
+  defp do_insert({:black,h,k,v,l,r}, kx, vx, cp) do
     case cp.(kx, k) do
        0 -> {:black,h,kx,vx,l,r}
       -1 -> do_balance_left(h, do_insert(l, kx, vx, cp), k, r, v)
        1 -> do_balance_right(h, l, k, do_insert(r, kx, vx, cp), v)
     end
   end
-  defp do_insert({:red,h,k,v,l,r}=t, kx, vx, cp) do
+  defp do_insert({:red,h,k,v,l,r}, kx, vx, cp) do
     case cp.(kx, k) do
        0 -> {:red,h,kx,vx,l,r}
       -1 -> {:red, h, k, v, do_insert(l, kx, vx, cp), r}
@@ -523,6 +558,48 @@ defmodule Rbtree do
   end
 
 # ----------------------------------------------------------------
+
+
+  def reduce_nodes(%Rbtree{}=tree, acc, fun) do
+    reduce_nodes(:in_order, tree, acc, fun)
+  end
+
+  def reduce_nodes(_order, %Rbtree{node: nil}, acc, _fun) do
+    acc
+  end
+
+  def reduce_nodes(order, %Rbtree{node: root}, acc, fun) do
+    do_reduce_nodes(order, root, acc, fun)
+  end
+
+
+  defp do_reduce_nodes(_order, nil, acc, _fun) do
+    acc
+  end
+
+  # self, left, right
+  defp do_reduce_nodes(:pre_order, {_,_,_,_,l,r}=node, acc, fun) do
+    acc_after_self = fun.(node, acc)
+    acc_after_left = do_reduce_nodes(:pre_order, l, acc_after_self, fun)
+    do_reduce_nodes(:pre_order, r, acc_after_left, fun)
+  end
+
+  # left, self, right
+  defp do_reduce_nodes(:in_order, {_,_,_,_,l,r}=node, acc, fun) do
+    acc_after_left = do_reduce_nodes(:in_order, l, acc, fun)
+    acc_after_self = fun.(node, acc_after_left)
+    do_reduce_nodes(:in_order, r, acc_after_self, fun)
+  end
+
+  # left, right, self
+  defp do_reduce_nodes(:post_order, {_,_,_,_,l,r}=node, acc, fun) do
+    acc_after_left = do_reduce_nodes(:post_order, l, acc, fun)
+    acc_after_right = do_reduce_nodes(:post_order, r, acc_after_left, fun)
+    fun.(node, acc_after_right)
+  end
+
+
+# ----------------------------------------------------------------
   # Comparator
   def compare_items(term1, term2) do
     cond do
@@ -549,6 +626,22 @@ defmodule Rbtree do
 end
 
 
+defimpl Enumerable, for: Rbtree do
+  def count(%Rbtree{size: size}), do: size
+  def member?(%Rbtree{}=tree, key), do: Rbtree.has_key?(tree, key)
+  def reduce(tree, acc, fun), do: Rbtree.reduce(tree, acc, fun)
+end
+
+defimpl Collectable, for: Rbtree do
+  def into(original) do
+    {original, fn
+      tree, {:cont, {key, value}} -> Rbtree.insert(tree, key, value)
+      tree, :done -> tree
+      _, :halt -> :ok
+    end}
+  end
+end
+
 defimpl Inspect, for: Rbtree do
   import Inspect.Algebra
 
@@ -556,4 +649,3 @@ defimpl Inspect, for: Rbtree do
     concat ["#Rbtree<", Inspect.List.inspect(Rbtree.to_list(tree), opts), ">"]
   end
 end
-
