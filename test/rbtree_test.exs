@@ -1,27 +1,14 @@
 defmodule RbtreeTest do
   use ExUnit.Case
 
-  alias Rbtree.Leaf
-  alias Rbtree.Node
-
   import Rbtree
 
   doctest Rbtree
 
   test "should create empty tree" do
-    assert empty() == %Rbtree{node: Leaf}
+    assert empty() == %Rbtree{node: nil}
     assert null?(empty())
     assert height(empty()) == 0
-  end
-
-  test "should create singleton" do
-    assert singleton(0) == %Rbtree{node: %Node{
-        color: :black,
-        depth: 1,
-        key: 0,
-        left: Leaf,
-        right: Leaf
-      }}
   end
 
   test "create a rbtree from list" do
