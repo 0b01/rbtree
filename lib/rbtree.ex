@@ -212,10 +212,10 @@ defmodule Rbtree do
   def range(%Rbtree{node: r, size: size}, a..b)
     when a < 0 and b >= 0 and b - (size + a) > 0, do:
       do_range(r, size + a, b)
-  def range(%Rbtree{node: r, size: size}=tree, a..b)
+  def range(%Rbtree{size: size}=tree, a..b)
     when a < 0 and b >= 0 and b - (size + a) == 0, do:
       [nth(tree, b)]
-  def range(%Rbtree{node: r, size: size}=tree, a..b)
+  def range(%Rbtree{node: r, size: size}, a..b)
     when a < 0 and b == 0, do:
       do_range(r, size + a, size - 1)
   def range(%Rbtree{node: r, size: size}, a..b)
@@ -224,7 +224,7 @@ defmodule Rbtree do
   def range(%Rbtree{node: r}, a..b)
     when a >= 0 and b >= 0, do: do_range(r, a, b)
 
-  defp do_range({_,h,k,v,l,r}=n, a, b) do
+  defp do_range({_,h,k,v,l,r}, a, b) do
     lc = left_count(h)
     cond do
       a == b && a == lc ->
@@ -268,6 +268,25 @@ defmodule Rbtree do
   defp left_count(h), do: :math.pow(2,h-1)-1 |> round
 
 #--------------------------------------------------------------
+  # filter range
+
+  def filter_range(%Rbtree{node: node, comparator: cp}, min, max), do:
+    do_filter_range(node, min, max, cp) |> from_list |> to_list |> Enum.reverse
+  defp do_filter_range(nil, _min, _max, _cp), do: []
+  defp do_filter_range({_,_,k,v,l,r}, min, max, cp) do
+    cond do
+      max == k && min == k -> [{k,v}]
+      cp.(k, max) <= 0 && cp.(k, min) >= 0 ->
+        [{k,v}] ++ do_filter_range(l, min, max, cp) ++
+          do_filter_range(r, min, max, cp)
+      cp.(k,min) < 0 ->
+        do_filter_range(r, min, max, cp)
+      true ->
+        do_filter_range(l, min, max, cp)
+    end
+  end
+
+#--------------------------------------------------------------
   # to_string
 
   def to_string(%Rbtree{node: tree, size: size}) , do: "\n(size:" <> Integer.to_string(size) <> ")\n" <> do_to_string "", tree
@@ -282,7 +301,7 @@ defmodule Rbtree do
 
 #--------------------------------------------------------------
 
-  def valid tree do
+  def valid? tree do
     balanced?(tree) && black_height(tree) && ordered?(tree)
   end
 
@@ -351,32 +370,30 @@ defmodule Rbtree do
 
 #--------------------------------------------------------------
 
-  defp balance_left(:black, h, {:red,_,y,yv,{:red,_,x,xv,a,b},c}, z, d), do:
-    {:red,h+1,y,yv,{:black,h,x,xv,a,b},{:black,h,z,nil,c,d,}}
+  defp balance_left(:black, h, {:red,_,y,yv,{:red,_,x,xv,a,b},c}, z, v, d), do:
+    {:red,h+1,y,yv,{:black,h,x,xv,a,b},{:black,h,z,v,c,d,}}
+  defp balance_left(:black, h, {:red,_,x,xv,a,{:red,_,y,yv,b,c}}, z, v, d), do:
+    {:red,h+1,y,yv,{:black,h,x,xv,a,b},{:black,z,v,c,d}}
+  defp balance_left(k, h, l, x, v, r), do:
+    {k,h,x,v,l,r}
 
-  defp balance_left(:black, h, {:red,_,x,xv,a,{:red,_,y,yv,b,c}}, z, d), do:
-    {:red,h+1,y,yv,{:black,h,x,xv,a,b},{:black,z,nil,c,d}}
-
-  defp balance_left(k, h, l, x, r), do:
-    {k,h,x,nil,l,r}
-
-  defp balance_right(:black, h, a, x, {:red,_,y,yv,b,{:red,_,z,zv,c,d}}), do:
-    {:red,h+1,y,yv,{:black,h,x,nil,a,b},{:black,h,z,zv,c,d}}
-  defp balance_right(:black, h, a, x, {:red,_,z,zv,{:red,_,y,yv,b,c},d}), do:
-    {:red,h+1,y,yv,{:black,h,x,nil,a,b},{:black,h,z,zv,c,d}}
-  defp balance_right(k, h, l, x, r), do:
-    {k,h,x,nil,l,r}
+  defp balance_right(:black, h, a, x, v, {:red,_,y,yv,b,{:red,_,z,zv,c,d}}), do:
+    {:red,h+1,y,yv,{:black,h,x,v,a,b},{:black,h,z,zv,c,d}}
+  defp balance_right(:black, h, a, x, v, {:red,_,z,zv,{:red,_,y,yv,b,c},d}), do:
+    {:red,h+1,y,yv,{:black,h,x,v,a,b},{:black,h,z,zv,c,d}}
+  defp balance_right(k, h, l, x, v, r), do:
+    {k,h,x,v,l,r}
 
 # ----------------------------------------------------------------
 
-  defp unbalanced_left(c, h, {:black,_,_,_,_,_}=l, x, r), do:
-    {balance_left(:black, h, (turn_red l), x, r), (c == :black)}
-  defp unbalanced_left(:black, h, {:red,lh,lx,lxv,ll,{:black,_,_,_,_,_}=lr}, x, r), do:
-    {{:black,lh,lx,lxv,ll,balance_left(:black, h, turn_red(lr), x, r)}, false}
-  defp unbalanced_right(c, h ,l ,x ,{:black,_,_,_,_,_}=r), do:
-    {balance_right(:black, h, l, x, turn_red(r)), c == :black}
-  defp unbalanced_right(:black, h, l, x, {:red,rh,rx,rxv,{:black,_,_,_,_,_,_}=rl,rr}), do:
-    {{:black,rh,rx,rxv,balance_right(:black, h, l, x, turn_red(rl)),rr}, false}
+  defp unbalanced_left(c, h, {:black,_,_,_,_,_}=l, x, v, r), do:
+    {balance_left(:black, h, (turn_red l), x, v, r), (c == :black)}
+  defp unbalanced_left(:black, h, {:red,lh,lx,lxv,ll,{:black,_,_,_,_,_}=lr}, x, v, r), do:
+    {{:black,lh,lx,lxv,ll,balance_left(:black, h, turn_red(lr), x, v, r)}, false}
+  defp unbalanced_right(c, h ,l, x, v,{:black,_,_,_,_,_}=r), do:
+    {balance_right(:black, h, l, x, v, turn_red(r)), c == :black}
+  defp unbalanced_right(:black, h, l, x, v, {:red,rh,rx,rxv,{:black,_,_,_,_,_,_}=rl,rr}), do:
+    {{:black,rh,rx,rxv,balance_right(:black, h, l, x, v, turn_red(rl)),rr}, false}
 
 # ----------------------------------------------------------------
 
@@ -395,7 +412,7 @@ defmodule Rbtree do
     {{r, false}, {x,v}}
   defp do_delete_min({c,h,x,v,l,r}) do
     {{do_l, d}, m} = do_delete_min l
-    tD = unbalanced_right(c, (h-1), do_l, x, r)
+    tD = unbalanced_right(c, (h-1), do_l, x, v, r)
     do_tD = {{c,h,x,v,do_l,r}, false}
     if d do
       {tD, m}
@@ -421,7 +438,7 @@ defmodule Rbtree do
     {{l, false}, x}
   defp do_delete_max({c,h,x,v,l,r}) do
     {{do_r, d}, m} = do_delete_max r
-    tD  = unbalanced_left(c, (h-1), l, x, do_r)
+    tD  = unbalanced_left(c, (h-1), l, x, v, do_r)
     do_tD = {{c,h,x,v,l,do_r}, false}
     if d do {tD, m} else {do_tD, m} end
   end
@@ -445,18 +462,18 @@ defmodule Rbtree do
       -1 ->
         {do_l, d} = do_delete(x, cp, l)
         t = {c,h,y,yv,do_l,r}
-        if d do unbalanced_right(c, h-1, do_l, y, r) else {t, false} end
+        if d do unbalanced_right(c, h-1, do_l, y, yv, r) else {t, false} end
        1 ->
         {do_r, d} = do_delete(x, cp, r)
         t = {c,h,y,yv,l,do_r}
-        if d do unbalanced_left(c, h-1, l, y, do_r) else {t, false} end
+        if d do unbalanced_left(c, h-1, l, y, yv, do_r) else {t, false} end
        0 ->
         if r == nil do
           if c == :black do blackify l else {l, false} end
         else
           {{do_r, d}, {m,v}} = do_delete_min r
           t = {c,h,m,v,l,do_r}
-          if d do unbalanced_left(c, h-1, l, m, do_r) else {t, false} end
+          if d do unbalanced_left(c, h-1, l, m, v, do_r) else {t, false} end
         end
     end
   end
@@ -482,19 +499,19 @@ defmodule Rbtree do
     end
   end
 
-  defp join_lt(t1, k, {c,h,x,_,l,r}=t2, h1) do
+  defp join_lt(t1, k, {c,h,x,v,l,r}=t2, h1) do
     if h == h1 do
       {:red,h+1,k,nil,t1,t2} # value is nil for now
     else
-      balance_left(c, h, (join_lt(t1, k, l, h1)), x, r)
+      balance_left(c, h, (join_lt(t1, k, l, h1)), x, v, r)
     end
   end
 
-  defp join_gt({c,h,x,_,l,r}=t1, k, t2, h2) do
+  defp join_gt({c,h,x,v,l,r}=t1, k, t2, h2) do
     if h == h2 do
       {:red,h+1,k,nil,t1,t2} # value is nil for now
     else
-      balance_right(c, h, l, x, (join_gt(r, k, t2, h2)))
+      balance_right(c, h, l, x, v, (join_gt(r, k, t2, h2)))
     end
   end
 
@@ -513,20 +530,20 @@ defmodule Rbtree do
     end
   end
 
-  defp merge_lt(t1,{c,h,x,_,l,r}=t2, h1) do
+  defp merge_lt(t1,{c,h,x,v,l,r}=t2, h1) do
     if h == h1 do
       merge_eq t1, t2
     else
-      balance_left(c, h, (merge_lt(t1, l, h1)), x, r)
+      balance_left(c, h, (merge_lt(t1, l, h1)), x, v, r)
     end
   end
 
-  defp merge_gt({c,h,x,_,l,r}=t1,
+  defp merge_gt({c,h,x,v,l,r}=t1,
    t2, h2) do
     if h == h2 do
       merge_eq t1, t2
     else
-      balance_right(c, h, l, x, (merge_gt(r, t2, h2)))
+      balance_right(c, h, l, x, v, (merge_gt(r, t2, h2)))
     end
   end
 

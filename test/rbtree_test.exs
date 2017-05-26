@@ -90,23 +90,27 @@ defmodule RbtreeTest do
     assert false == singleton("new") |> member?("nw")
   end
 
-  # test "deletion" do
-  #   tree = Rbtree.from_list(1..4 |> Enum.map(&Integer.to_string/1) |>Enum.to_list)
-  #   assert tree |> delete(1) |> delete(2) |> size == 2
+  test "tree filter_range" do
+    tree = Rbtree.from_list(1..100 |> Enum.to_list)
+    assert 1..10 |> Enum.to_list == tree |> filter_range(1, 10)
+  end
 
-  #   initial_tree = Rbtree.new([d: 1, b: 2, c: 3, a: 4])
-  #   assert 4 == initial_tree.size
-  #   pruned_tree = delete(initial_tree, :c)
+  test "deletion" do
+    tree = Rbtree.from_list(1..4 |> Enum.map(&Integer.to_string/1) |>Enum.to_list)
+    assert tree |> delete(1) |> delete(2) |> size == 2
 
-  #   assert 3 == pruned_tree.size
-  #   assert Enum.reverse([{:a, 4}, {:b, 2}, {:d, 1}]) == to_list pruned_tree
+    initial_tree = Rbtree.new([d: 1, b: 2, c: 3, a: 4])
+    assert 4 == initial_tree.size
+    pruned_tree = delete(initial_tree, :c)
 
-  #   assert 2 == delete(pruned_tree, :a).size
-  #   assert Enum.reverse([{:b, 2}, {:d, 1}]) == to_list delete(pruned_tree, :a)
+    assert 3 == pruned_tree.size
+    assert Enum.reverse([{:a, 4}, {:b, 2}, {:d, 1}]) == to_list pruned_tree
 
-  #   assert [] == to_list delete new(), :b
-  # end
+    assert 2 == delete(pruned_tree, :a).size
+    assert Enum.reverse([{:b, 2}, {:d, 1}]) == to_list delete(pruned_tree, :a)
 
+    assert [] == to_list delete new(), :b
+  end
 
   test "has_key?" do
     assert Rbtree.has_key?(Rbtree.new([a: 1, b: 2]), :b)
@@ -127,7 +131,7 @@ defmodule RbtreeTest do
     assert tree |> nth(1) == {2,2}
     assert tree |> nth(-1) == {10,10}
   end
-  
+
   test "get range a..b" do
     tree = Rbtree.from_list(1..4 |> Enum.to_list)
     assert [{1, nil}] == tree |> range(0..0)
