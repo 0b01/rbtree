@@ -1,67 +1,69 @@
-defmodule Rbtree do
+defmodule Tree do
   @moduledoc """
-    Author: Ricky Han<rickylqhan@gmail.com>
-    Based on Haskell Data.Set.RBtree implementation
-    https://hackage.haskell.org/package/llrbtree-0.1.1/docs/src/Data-Set-RBTree.html
 
-    {color, depth, key, value, left, right}
+  A set of functions for red-black tree.
+
+  Red-black tree is a self-balancing binary search tree data structure. Although Elixir has
+  excellent support for hash map, it does not include any sorted or ordered data structures.
+  This package will be the underlying data structure for SortedMap and SortedSet.
+  In addition to usual operations, it also supports ordinal indexing with time
+  complexity O(log(N)) for versatility.
+
+  Author: Ricky Han<rickylqhan@gmail.com>
+  Modified from Data.Set.RBtree package in Haskell.
   """
+
+  @type key :: any
+  @type value :: any
+  # @compile {:inline, fetch: 2, put: 3, delete: 2, has_key?: 2, replace!: 3}
+
   @behaviour Access
-  @key_hash_bucket 4294967296
-
-  defstruct(
-    size: 0,
-    node: nil,
-    comparator: &__MODULE__.compare_items/2
-  )
-
+# {node, size, comparator}
 #--------------------------------------------------------------
 
   # Attributes
-  def null?(%Rbtree{node: node}) do
+  def null?({node,_}) do
     case node do
       nil -> true
       _ -> false
     end
   end
 
-  def height(%Rbtree{node: nil}), do: 0
-  def height(%Rbtree{node: {_,h,_,_,_,_}}), do: h
+  def height({nil,_}), do: 0
+  def height({{_,h,_,_,_,_},_,_}), do: h
 
-  def size(%Rbtree{size: size}), do: size
+  def size({_,size}), do: size
 
 #--------------------------------------------------------------
 
   # Create
   def new(), do: empty()
-  def new(list, comparator \\ &compare_items/2)
-  def new(list, comparator) when is_list(list), do: from_list(list, comparator)
+  def new(list)
+  def new(list) when is_list(list), do: from_list(list)
 
-  def empty(cp \\ &compare_items/2) do
-    %Rbtree{node: nil, comparator: cp}
+  def empty() do
+    {nil,0}
   end
 
-  def singleton(key), do:
-    singleton(key, nil)
-
+  def singleton(key, value \\ nil)
   def singleton(key, value), do:
-    %Rbtree{node: {:black, 1, key, value, nil, nil}}
+    {{:black, 1, key, value, nil, nil},1}
 
 
-  def from_list(list, comparator \\ &compare_items/2) when is_list(list) do
-    Enum.reduce(list, empty(comparator), fn(i, set) ->
+  def from_list(list) when is_list(list) do
+    Enum.reduce(list, empty(), fn(i, set) ->
       case i do
         {k, v} ->
           insert(set, k, v)
          k ->
-          insert(set, k)
+          insert(set, k, nil)
       end
     end)
   end
 
 #--------------------------------------------------------------
   def reduce(tree, acc, fun) do
-    Rbtree.to_list(tree)
+    __MODULE__.to_list(tree)
     |> Enum.reduce(acc, fun)
   end
 #--------------------------------------------------------------
@@ -73,13 +75,13 @@ defmodule Rbtree do
 #--------------------------------------------------------------
 
   def to_list(tree, acc \\ [])
-  def to_list(%Rbtree{node: nil}, acc), do: acc
-  def to_list(%Rbtree{node: node}, acc), do: do_to_list(node, acc)
+  def to_list({nil,_}, acc), do: acc
+  def to_list({node,_}, acc), do: do_to_list(node, acc) |> Enum.reverse
   defp do_to_list(nil, acc), do: acc
   defp do_to_list({_,_,k,v,l,r}, acc) when v == nil, do:
-    do_to_list(l, do_to_list(r, acc) ++ [k])
+    do_to_list(l, [k | do_to_list(r, acc)])
   defp do_to_list({_,_,k,v,l,r}, acc), do:
-    do_to_list(l, do_to_list(r, acc) ++ [{k,v}])
+    do_to_list(l, [ {k,v} | do_to_list(r, acc)])
 
 #--------------------------------------------------------------
 
@@ -94,13 +96,13 @@ defmodule Rbtree do
   end
 
   def get_and_update(tree, key, fun) do
-    {get, update} = fun.(Rbtree.get(tree, key))
-    {get, Rbtree.insert(tree, key, update)}
+    {get, update} = fun.(__MODULE__.get(tree, key))
+    {get, __MODULE__.insert(tree, key, update)}
   end
 
   def pop(tree, key) do
-    value = Rbtree.get(tree, key, :error)
-    new_tree = Rbtree.delete(tree, key)
+    value = __MODULE__.get(tree, key, :error)
+    new_tree = __MODULE__.delete(tree, key)
     {value, new_tree}
   end
 
@@ -113,15 +115,15 @@ defmodule Rbtree do
 
 #--------------------------------------------------------------
 
-  def get(%Rbtree{node: nil}, _key), do: nil
-  def get(%Rbtree{node: node, comparator: cp}, key), do:
-    do_get(node, key, cp)
-  defp do_get(nil, _search_key, _comparator), do: false
-  defp do_get({_,_,k,v,l,r}, srch_key, cp) do
-    case cp.(srch_key, k) do
-       0 -> v
-      -1 -> do_get(l, srch_key, cp)
-       1 -> do_get(r, srch_key, cp)
+  def get({nil,_}, _key), do: nil
+  def get({node,_}, key), do:
+    do_get(node, key)
+  defp do_get(nil, _search_key), do: false
+  defp do_get({_,_,k,v,l,r}, srch_key) do
+    cond do
+       srch_key == k -> v
+       srch_key < k -> do_get(l, srch_key)
+       srch_key > k -> do_get(r, srch_key)
     end
   end
 
@@ -131,16 +133,16 @@ defmodule Rbtree do
 
   def has_key?(tree, key), do: member?(tree, key)
 
-  def member?(%Rbtree{node: nil}, _key), do: false
-  def member?(%Rbtree{node: node, comparator: cp}, key), do:
-    do_member?(node, key, cp)
+  def member?({nil,_}, _key), do: false
+  def member?({node,_}, key), do:
+    do_member?(node, key)
 
-  defp do_member?(nil, _search_key, _comparator), do: false
-  defp do_member?({_,_,k,_,l,r}, srch_key, cp) do
-    case cp.(srch_key, k) do
-       0 -> true
-      -1 -> do_member?(l, srch_key, cp)
-       1 -> do_member?(r, srch_key, cp)
+  defp do_member?(nil, _search_key), do: false
+  defp do_member?({_,_,k,_,l,r}, srch_key) do
+    cond do
+       srch_key == k -> true
+       srch_key < k -> do_member?(l, srch_key)
+       srch_key > k -> do_member?(r, srch_key)
     end
   end
 
@@ -158,12 +160,11 @@ defmodule Rbtree do
 
   defp blacks(n, acc \\ 0)
   defp blacks(nil, acc), do: [acc + 1]
-
   defp blacks({:black,_,_,_,l,r}, acc), do:
-    blacks(l, acc + 1) ++ blacks(r, acc + 1)
+    [blacks(l, acc + 1) | blacks(r, acc + 1)]
 
   defp blacks({:red,_,_,_,l,r}, acc), do:
-    blacks(l, acc    ) ++ blacks(r, acc    )
+    [blacks(l, acc) | blacks(r, acc)]
 
   defp is_red_separate(t), do: reds(:black, t)
 
@@ -172,12 +173,12 @@ defmodule Rbtree do
   defp reds(_color, {c,_,_,_,l,r}), do:
     (reds c, l) && (reds c, r)
 
-  defp ordered?(tree, comparator \\ &compare_items/2)
-  defp ordered?(tree, cp), do: tree |> to_list |> Enum.reverse |> do_ordered(cp)
-  defp do_ordered(list, cp \\ &compare_items/2)
-  defp do_ordered([], _), do: true
-  defp do_ordered([_], _), do: true
-  defp do_ordered([x|[y|_]=xs], cp), do: cp.(x,y) && do_ordered(xs)
+  defp ordered?(tree)
+  defp ordered?(tree), do: tree |> to_list |> Enum.reverse |> do_ordered()
+  defp do_ordered(list)
+  defp do_ordered([]), do: true
+  defp do_ordered([_]), do: true
+  defp do_ordered([x|[y|_]=xs]), do: x<=y && do_ordered(xs)
 
   defp black_height(nil), do: true
   defp black_height({:black,h,_,_,_,_}=t), do: do_black_height(t, h)
@@ -203,25 +204,25 @@ defmodule Rbtree do
 
 #--------------------------------------------------------------
 
-  def range(%Rbtree{size: size}, a..b) when a > size - 1
+  def range({_,size}, a..b) when a > size - 1
                                          or b > size - 1, do: nil
-  def range(%Rbtree{}=tree, a..b) when a == b, do: [nth(tree, a)]
-  def range(%Rbtree{node: r, size: size}, a..b)
+  def range({_,_}=tree, a..b) when a == b, do: [nth(tree, a)]
+  def range({r,size}, a..b)
     when a < 0 and b < 0, do:
       do_range(r, size + a, size + b)
-  def range(%Rbtree{node: r, size: size}, a..b)
+  def range({r,size}, a..b)
     when a < 0 and b >= 0 and b - (size + a) > 0, do:
       do_range(r, size + a, b)
-  def range(%Rbtree{size: size}=tree, a..b)
+  def range({_,size}=tree, a..b)
     when a < 0 and b >= 0 and b - (size + a) == 0, do:
       [nth(tree, b)]
-  def range(%Rbtree{node: r, size: size}, a..b)
+  def range({r,size}, a..b)
     when a < 0 and b == 0, do:
       do_range(r, size + a, size - 1)
-  def range(%Rbtree{node: r, size: size}, a..b)
+  def range({r,size}, a..b)
     when a >= 0 and b < 0, do:
       do_range(r, a, size + b)
-  def range(%Rbtree{node: r}, a..b)
+  def range({r,_}, a..b)
     when a >= 0 and b >= 0, do: do_range(r, a, b)
 
   defp do_range({_,h,k,v,l,r}, a, b) do
@@ -244,9 +245,9 @@ defmodule Rbtree do
 
 #--------------------------------------------------------------
 
-  def nth(%Rbtree{size: size}, n) when n > size - 1 or size == 0, do: nil
-  def nth(%Rbtree{node: r, size: size}, n) when n < 0, do: do_nth(r, size + n)
-  def nth(%Rbtree{node: r}, n) when n >= 0, do: do_nth(r, n)
+  def nth({_,size}, n) when n > size - 1 or size == 0, do: nil
+  def nth({r,size}, n) when n < 0, do: do_nth(r, size + n)
+  def nth({r,_}, n) when n >= 0, do: do_nth(r, n)
   defp do_nth({_,h,k,v,l,r}, n) do
     l_count = left_count(h)
     cond do
@@ -270,26 +271,26 @@ defmodule Rbtree do
 #--------------------------------------------------------------
   # filter range
 
-  def filter_range(%Rbtree{node: node, comparator: cp}, min, max), do:
-    do_filter_range(node, min, max, cp) |> from_list |> to_list |> Enum.reverse
-  defp do_filter_range(nil, _min, _max, _cp), do: []
-  defp do_filter_range({_,_,k,v,l,r}, min, max, cp) do
+  def filter_range({node,_}, min, max), do:
+    do_filter_range(node, min, max) |> from_list |> to_list |> Enum.reverse
+  defp do_filter_range(nil, _min, _max), do: []
+  defp do_filter_range({_,_,k,v,l,r}, min, max) do
     cond do
       max == k && min == k -> [{k,v}]
-      cp.(k, max) <= 0 && cp.(k, min) >= 0 ->
-        [{k,v}] ++ do_filter_range(l, min, max, cp) ++
-          do_filter_range(r, min, max, cp)
-      cp.(k,min) < 0 ->
-        do_filter_range(r, min, max, cp)
+      k <= max && k >= min ->
+        [{k,v}] ++ do_filter_range(l, min, max) ++
+          do_filter_range(r, min, max)
+      k < min ->
+        do_filter_range(r, min, max)
       true ->
-        do_filter_range(l, min, max, cp)
+        do_filter_range(l, min, max)
     end
   end
 
 #--------------------------------------------------------------
   # to_string
 
-  def to_string(%Rbtree{node: tree, size: size}) , do: "\n(size:" <> Integer.to_string(size) <> ")\n" <> do_to_string "", tree
+  def to_string({tree,size}) , do: "\n(size:" <> Integer.to_string(size) <> ")\n" <> do_to_string "", tree
   def do_to_string(_, nil), do: "\n"
   def do_to_string(pref, {c,h,k,v,l,r}), do:
        Atom.to_string(c) <> " { " <> Kernel.inspect(k) <> ", " <> Kernel.inspect(v) <> " }(d:"
@@ -311,27 +312,46 @@ defmodule Rbtree do
   ## Insertion
   #  Chris Okasaki
 
-  def insert(tree, k), do: insert(tree, k, nil)
-  def insert(%Rbtree{node: node, comparator: cp, size: size}, k, v) do
-    new_size = if do_member?(node, k, cp) do size else size + 1 end
-    %Rbtree{size: new_size, node: turn_black(do_insert(node, k, v, cp))}
+  # def insert(tree, k), do: insert(tree, k, nil)
+  def insert({node,size}, k, v) do
+    {new_node, status} = do_insert(node, k, v)
+    {_,h,k,v,l,r} = new_node
+    new_node = {:black,h,k,v,l,r}
+    new_size = if status == :add do size + 1 else size end
+    {new_node,new_size}
   end
 
-  defp do_insert(nil, key, val, _cp), do:
-    {:red, 1, key, val, nil, nil}
-  defp do_insert({:black,h,k,v,l,r}, kx, vx, cp) do
-    case cp.(kx, k) do
-       0 -> {:black,h,kx,vx,l,r}
-      -1 -> do_balance_left(h, do_insert(l, kx, vx, cp), k, r, v)
-       1 -> do_balance_right(h, l, k, do_insert(r, kx, vx, cp), v)
-    end
+  defp do_insert(nil, key, val), do:
+    {{:red, 1, key, val, nil, nil}, :add}
+
+  defp do_insert({:black,h,k,v,l,r}, kx, vx) when kx == k do
+    status = if v == vx do :replace else :add end
+    {{:black,h,kx,vx,l,r}, status}
   end
-  defp do_insert({:red,h,k,v,l,r}, kx, vx, cp) do
-    case cp.(kx, k) do
-       0 -> {:red,h,kx,vx,l,r}
-      -1 -> {:red, h, k, v, do_insert(l, kx, vx, cp), r}
-       1 -> {:red, h, k, v, l, do_insert(r, kx, vx, cp)}
-    end
+
+  defp do_insert({:black,h,k,v,l,r}, kx, vx) when kx < k do
+    {node, status} = do_insert(l, kx, vx)
+    {do_balance_left(h, node, k, r, v), status}
+  end
+
+  defp do_insert({:black,h,k,v,l,r}, kx, vx) when kx > k do
+    {node, status} = do_insert(r, kx, vx)
+    {do_balance_right(h, l, k, node, v), status}
+  end
+
+  defp do_insert({:red,h,k,v,l,r}, kx, vx) when kx == k do
+    status = if v == vx do :replace else :add end
+    {{:red,h,kx,vx,l,r}, status}
+  end
+
+  defp do_insert({:red,h,k,v,l,r}, kx, vx) when kx < k do
+    {node, status} = do_insert(l, kx, vx)
+    {{:red, h, k, v, node, r}, status}
+  end
+
+  defp do_insert({:red,h,k,v,l,r}, kx, vx) when kx > k do
+    {node, status} = do_insert(r, kx, vx)
+    {{:red, h, k, v, l, node}, status}
   end
 
   defp do_balance_left(h, {:red,_,y,yv,{:red,_,x,xv,a,b},c}, z, d, zv), do:
@@ -340,17 +360,13 @@ defmodule Rbtree do
   defp do_balance_left(h, {:red,_,x,xv,a,{:red,_,y,yv,b,c}},z ,d, zv), do:
     {:red,h+1,y,yv,{:black,h,x,xv,a,b},{:black,h,z,zv,c,d}}
 
-  defp do_balance_left(h, l, x, r, xv), do:
-    {:black,h,x,xv,l,r}
+  defp do_balance_left(h, l, x, r, xv), do: {:black,h,x,xv,l,r}
 
   defp do_balance_right(h, a, x, {:red,_,y,yv,b,{:red,_,z,zv,c,d}}, xv), do:
     {:red,h+1,y,yv,{:black,h,x,xv,a,b},{:black,h,z,zv,c,d}}
-
   defp do_balance_right(h, a, x, {:red,_,z,zv,{:red,_,y,yv,b,c},d},xv), do:
     {:red,h+1,y,yv,{:black,h,x,xv,a,b},{:black,h,z,zv,c,d}}
-
-  defp do_balance_right(h, l, x, r, xv), do:
-    {:black,h,x,xv,l,r}
+  defp do_balance_right(h, l, x, r, xv), do: {:black,h,x,xv,l,r}
 
   # # PEG.js parser
   # Start
@@ -397,10 +413,10 @@ defmodule Rbtree do
 
 # ----------------------------------------------------------------
 
-  def delete_min(%Rbtree{node: nil}), do: empty()
-  def delete_min(%Rbtree{node: t, size: size}) do
+  def delete_min({nil,_}), do: empty()
+  def delete_min({t,size}) do
     {{s, _}, _} = do_delete_min t
-    %Rbtree{node: do_turn_black(s), size: size - 1}
+    {do_turn_black(s),size - 1}
   end
 
   defp do_delete_min(nil), do: throw("error")
@@ -423,10 +439,10 @@ defmodule Rbtree do
 
 # ----------------------------------------------------------------
 
-  def delete_max(%Rbtree{node: nil}), do: empty()
-  def delete_max(%Rbtree{node: t, size: size}) do
+  def delete_max({nil,_,_}), do: empty()
+  def delete_max({t,size}) do
     {{s, _},_} = do_delete_max t
-    %Rbtree{node: do_turn_black(s), size: size - 1}
+    {do_turn_black(s), size - 1}
   end
 
   defp do_delete_max(nil), do: throw("do_delete_max")
@@ -450,24 +466,24 @@ defmodule Rbtree do
 
 # ----------------------------------------------------------------
 
-  def delete(%Rbtree{node: t, comparator: cp, size: size}, x) do
-    {s, _} = do_delete(x, cp, t)
+  def delete({t,size,}, x) do
+    {s, _} = do_delete(x, t)
     new_size = if s == nil do size else size - 1 end
-    %Rbtree{node: do_turn_black(s), size: new_size}
+    {do_turn_black(s),new_size,}
   end
 
-  defp do_delete(_, _cp, nil), do: {nil, false}
-  defp do_delete(x, cp, {c,h,y,yv,l,r}) do
-    case cp.(x, y) do
-      -1 ->
-        {do_l, d} = do_delete(x, cp, l)
+  defp do_delete(_, nil), do: {nil, false}
+  defp do_delete(x, {c,h,y,yv,l,r}) do
+    cond do
+      x < y ->
+        {do_l, d} = do_delete(x,l)
         t = {c,h,y,yv,do_l,r}
         if d do unbalanced_right(c, h-1, do_l, y, yv, r) else {t, false} end
-       1 ->
-        {do_r, d} = do_delete(x, cp, r)
+      x > y ->
+        {do_r, d} = do_delete(x,r)
         t = {c,h,y,yv,l,do_r}
         if d do unbalanced_left(c, h-1, l, y, yv, do_r) else {t, false} end
-       0 ->
+      x == y ->
         if r == nil do
           if c == :black do blackify l else {l, false} end
         else
@@ -484,8 +500,8 @@ defmodule Rbtree do
 # -- Set operations
 # ----------------------------------------------------------------
 
-  def join(nil, k, t2), do: insert(k, t2)
-  def join(t1, k, nil), do: insert(k, t1)
+  def join(nil, k, t2), do: insert(k, t2, nil)
+  def join(t1, k, nil), do: insert(k, t1, nil)
   def join(t1, k, t2) do
     h1 = height t1
     h2 = height t2
@@ -619,15 +635,15 @@ defmodule Rbtree do
 # ----------------------------------------------------------------
 
 
-  def reduce_nodes(%Rbtree{}=tree, acc, fun) do
+  def reduce_nodes({_,_,_}=tree, acc, fun) do
     reduce_nodes(:in_order, tree, acc, fun)
   end
 
-  def reduce_nodes(_order, %Rbtree{node: nil}, acc, _fun) do
+  def reduce_nodes(_order, {nil,_,_}, acc, _fun) do
     acc
   end
 
-  def reduce_nodes(order, %Rbtree{node: root}, acc, fun) do
+  def reduce_nodes(order, {root,_,_}, acc, fun) do
     do_reduce_nodes(order, root, acc, fun)
   end
 
@@ -660,51 +676,58 @@ defmodule Rbtree do
 
 # ----------------------------------------------------------------
   # Comparator
-  def compare_items(term1, term2) do
+  def comparator(term1, term2) do
     cond do
-      term1 === term2 -> 0
+      term1 == term2 -> 0
       term1 < term2 -> -1
       term1 > term2 -> 1
-      term1 == term2 ->
-        case compare_items(hash_term(term1), hash_term(term2)) do
-          0 -> compare_items(fallback_term_hash(term1),
-            fallback_term_hash(term2))
-          hash_comparison_result -> hash_comparison_result
-        end
     end
   end
+  # def compare_items(term1, term2) do
+  #   cond do
+  #     term1 === term2 -> 0
+  #     term1 < term2 -> -1
+  #     term1 > term2 -> 1
+  #     term1 == term2 ->
+  #       case compare_items(hash_term(term1), hash_term(term2)) do
+  #         0 -> compare_items(fallback_term_hash(term1),
+  #           fallback_term_hash(term2))
+  #         hash_comparison_result -> hash_comparison_result
+  #       end
+  #   end
+  # end
 
-  defp hash_term(term) do
-    :erlang.phash2(term, @key_hash_bucket)
-  end
+  # defp hash_term(term) do
+  #   :erlang.phash2(term, @key_hash_bucket)
+  # end
 
-  defp fallback_term_hash(term) do
-    :erlang.phash(term, @key_hash_bucket)
-  end
+  # defp fallback_term_hash(term) do
+  #   :erlang.phash(term, @key_hash_bucket)
+  # end
 
 end
 
 
-defimpl Enumerable, for: Rbtree do
-  def count(%Rbtree{size: size}), do: size
-  def member?(%Rbtree{}=tree, key), do: Rbtree.has_key?(tree, key)
-  def reduce(tree, acc, fun), do: Rbtree.reduce(tree, acc, fun)
+defimpl Enumerable, for: Tree do
+  def count({_,size,_}), do: size
+  def member?({_,_,_}=tree, key), do: Tree.has_key?(tree, key)
+  def reduce(tree, acc, fun), do: Tree.reduce(tree, acc, fun)
 end
 
-defimpl Collectable, for: Rbtree do
+defimpl Collectable, for: Tree do
   def into(original) do
     {original, fn
-      tree, {:cont, {key, value}} -> Rbtree.insert(tree, key, value)
+      tree, {:cont, {key, value}} -> Tree.insert(tree, key, value)
       tree, :done -> tree
       _, :halt -> :ok
     end}
   end
 end
 
-defimpl Inspect, for: Rbtree do
+defimpl Inspect, for: Tree do
   import Inspect.Algebra
 
   def inspect(tree, opts) do
-    concat ["#Rbtree<", Inspect.List.inspect(Rbtree.to_list(tree), opts), ">"]
+    concat ["#Tree<", Inspect.List.inspect(Tree.to_list(tree), opts), ">"]
   end
 end

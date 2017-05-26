@@ -33,7 +33,10 @@ defmodule Rbtree.Mixfile do
   defp deps do
     [
       {:dogma, "~> 0.1", only: :dev},
-      {:excoveralls, "~> 0.6", only: :test}
+      {:excoveralls, "~> 0.6", only: :test},
+      {:benchfella, "~> 0.3.0"},
+      {:exprof, "~> 0.2.0"},
+      {:rbdict, github: "rvirding/rb", app: false}
     ]
   end
 end
