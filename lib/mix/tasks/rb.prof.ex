@@ -13,14 +13,22 @@ defmodule Mix.Tasks.Tree.Prof do
 
   def run(_mix_args) do
     profile do
+      :rbdict.from_list(@dict)
+      Tree.from_list(@dict)
+
+
       # :gb_sets.from_list(@dict)
       # Tree.from_list(@dict)
-      :rbdict.from_list(@dict)
+      # :rbdict.from_list(@dict)
       # Enum.each(@list, &Tree.delete(@tree, &1))
 
       # Tree.to_list(@tree)
 
-      # Tree.get(@tree, 0)
+
+      # for i <- @list do
+      #   Tree.fetch(@tree, i)
+      #   :rbdict.fetch(i, @rbdict)
+      # end
 
       # Tree.member?(@tree, 10)
       # :rbdict.is_key(10, @rbdict)

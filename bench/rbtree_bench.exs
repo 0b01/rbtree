@@ -1,113 +1,120 @@
 defmodule Tree.Bench do
-  use Benchfella
+  use Benchfella, duration: 0.5
 
   @list Enum.to_list(1000..1)
   @dict @list |> Enum.map(&({&1,nil}))
+  @words Tree.Bench.words()
 
-  @tree Tree.from_list(@dict)
-  @rbdict :rbdict.from_list(@dict)
+  @tree Tree.from_list(@words)
+  @rbdict :rbdict.from_list(@words)
   @gbsets :gb_sets.from_list(@list)
-  @gbtrees :gb_trees.from_orddict(@dict)
+  @gbtrees :gb_trees.from_orddict(@words)
 # -------------------------
 # This one is the key metrics
 
-  # bench "rbdict: new", [words: words()] do
-  #   :rbdict.from_list(words)
-  # end
+  bench "rbdict: words from_list", [words: words()] do
+    :rbdict.from_list(words)
+  end
 
-  # bench "gb_sets: new", [words: words()] do
-  #   :gb_sets.from_list(words)
-  # end
+  bench "gb_sets: words from_list", [words: words()] do
+    :gb_sets.from_list(words)
+  end
 
-  # bench "gb_trees: new", [words: words()] do
-  #   :gb_trees.from_orddict(words)
-  # end
+  bench "gb_trees: words from_list", [words: words()] do
+    :gb_trees.from_orddict(words)
+  end
 
-  # bench "Tree: new", [words: words()] do
-  #   Tree.from_list(words)
-  # end
-
-# -------------------------
-
-
-  # bench "rbdict: new" do
-  #   :rbdict.from_list(@dict)
-  # end
-
-  # bench "gb_sets: new" do
-  #   :gb_sets.from_list(@dict)
-  # end
-
-  # bench "gb_trees: new" do
-  #   :gb_trees.from_orddict(@dict)
-  # end
-
-  # bench "Tree: new" do
-  #   Tree.from_list(@dict)
-  # end
+  bench "Tree: words from_list", [words: words()] do
+    Tree.from_list(words)
+  end
 
 # -------------------------
 
-  # bench "Tree: delete" do
-  #   Tree.delete(@tree, 100)
-  # end
 
-  # bench "rbdict: delete" do
-  #   :rbdict.erase(100, @rbdict)
-  # end
+  bench "rbdict: new from_list" do
+    :rbdict.from_list(@dict)
+  end
 
-  # bench "gbsets: delete" do
-  #   :gb_sets.delete(100,@gbsets)
-  # end
+  bench "gb_sets: new from_list" do
+    :gb_sets.from_list(@dict)
+  end
 
-  # bench "gbtrees: delete" do
-  #   :gb_trees.delete_any(100,@gbtrees)
-  # end
+  bench "gb_trees: new from_list" do
+    :gb_trees.from_orddict(@dict)
+  end
+
+  bench "Tree: new from_list" do
+    Tree.from_list(@dict)
+  end
 
 # -------------------------
 
-  # bench "Tree: to_list" do
-  #   Tree.to_list(@tree)
+  bench "Tree: delete", [words: words()] do
+    Tree.delete(@tree, "Teresa") 
+  end
+
+  bench "rbdict: delete", [words: words()] do
+    :rbdict.erase("Teresa",  @rbdict)
+  end
+
+  # bench "gbsets: delete", [words: words()] do
+  #   :gb_sets.delete(100, @gbsets)
   # end
 
-  # bench "rbdict: to_list" do
-  #   :rbdict.to_list(@rbdict)
-  # end
+  bench "gbtrees: delete", [words: words()] do
+    :gb_trees.delete_any("Teresa", @gbtrees)
+  end
+
+# -------------------------
+
+  bench "Tree: to_list" do
+    Tree.to_list(@tree)
+  end
+
+  bench "rbdict: to_list" do
+    :rbdict.to_list(@rbdict)
+  end
 
   # bench "gbsets: to_list" do
   #   :gb_sets.to_list(@gbsets)
   # end
 
-  # bench "gbtrees: to_list" do
-  #   :gb_trees.to_list(@gbtrees)
-  # end
+  bench "gbtrees: to_list" do
+    :gb_trees.to_list(@gbtrees)
+  end
 
 # -------------------------
 
-  # bench "tree: get size" do
-  #     Tree.size(@tree)
-  # end
+  bench "Tree: lookup" do
+    for i <- @list do
+      Tree.fetch(@tree, i)
+    end
+  end
 
-  # bench "rbdict: get size" do
-  #   :rbdict.size(@rbdict)
-  # end
+  bench "rbdict: lookup" do
+    for i <- @list do
+      :rbdict.fetch(i, @rbdict)
+    end
+  end
 
-  # bench "gbsets: get size" do
-  #   :gb_sets.size(@gbsets)
-  # end
+  bench "gbtrees: lookup" do
+    :gb_trees.lookup(100, @gbtrees)
+  end
 
 # -------------------------
-  # bench "tree: new" do
-  #     Tree.new()
-  # end
 
-  # bench "rbdict: new" do
-  #   :rbdict.new()
-  # end
+  bench "tree: get size" do
+      Tree.size(@tree)
+  end
 
-  # bench "gbsets: new" do
-  #   :gb_sets.new()
-  # end
+  bench "rbdict: get size" do
+    :rbdict.size(@rbdict)
+  end
+
+  bench "gbsets: get size" do
+    :gb_sets.size(@gbsets)
+  end
+
 # -------------------------
 
   bench "tree: is_element" do
@@ -127,7 +134,7 @@ defmodule Tree.Bench do
   end
 
 # -------------------------
-  defp words do
+  def words do
     {:ok, lines} = File.read "bench/female-names.txt"
     lines |> String.split("\n") |> Enum.map(&{&1, &1})
   end

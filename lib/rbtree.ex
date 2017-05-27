@@ -49,15 +49,15 @@ defmodule Tree do
   def singleton(key, value), do:
     {{:black, 1, key, value, nil, nil},1}
 
-
   def from_list(list) when is_list(list) do
-    Enum.reduce(list, empty(), fn(i, set) ->
-      case i do
-        {k, v} ->
-          insert(set, k, v)
-         k ->
-          insert(set, k, nil)
-      end
+    Enum.reduce(list, empty(), fn(k, set) ->
+      insert(set, k, nil)
+    end)
+  end
+
+  def from_orddict(list) when is_list(list) do
+    Enum.reduce(list, empty(), fn({k,v}, set) ->
+      insert(set, k, v)
     end)
   end
 
@@ -86,17 +86,17 @@ defmodule Tree do
 #--------------------------------------------------------------
 
   # For Access behavior
-  def fetch(tree, key) do
-    ret = get(tree, key)
-    if ret == nil do
-      :error
-    else
-      {:ok, ret}
-    end
-  end
+  # def fetch(tree, key) do
+  #   ret = get(tree, key)
+  #   if ret == nil do
+  #     :error
+  #   else
+  #     {:ok, ret}
+  #   end
+  # end
 
   def get_and_update(tree, key, fun) do
-    {get, update} = fun.(__MODULE__.get(tree, key))
+    {get, update} = fun.(__MODULE__.fetch(tree, key))
     {get, __MODULE__.insert(tree, key, update)}
   end
 
@@ -115,17 +115,10 @@ defmodule Tree do
 
 #--------------------------------------------------------------
 
-  def get({nil,_}, _key), do: nil
-  def get({node,_}, key), do:
-    do_get(node, key)
-  defp do_get(nil, _search_key), do: false
-  defp do_get({_,_,k,v,l,r}, srch_key) do
-    cond do
-       srch_key == k -> v
-       srch_key < k -> do_get(l, srch_key)
-       srch_key > k -> do_get(r, srch_key)
-    end
-  end
+  # def fetch({nil,_}, ks), do: false
+  def fetch({{_,_,k,_,l,_},_}, ks) when ks < k, do: fetch({l,nil}, ks)
+  def fetch({{_,_,k,_,_,r},_}, ks) when ks > k, do: fetch({r,nil}, ks)
+  def fetch({{_,_,_,v,_,_},_}, ks), do: v
 
   def set(tree, key, value), do:
     insert(tree, key, value)
@@ -133,18 +126,10 @@ defmodule Tree do
 
   def has_key?(tree, key), do: member?(tree, key)
 
-  def member?({nil,_}, _key), do: false
-  def member?({node,_}, key), do:
-    do_member?(node, key)
-
-  defp do_member?(nil, _search_key), do: false
-  defp do_member?({_,_,k,_,l,r}, srch_key) do
-    cond do
-       srch_key == k -> true
-       srch_key < k -> do_member?(l, srch_key)
-       srch_key > k -> do_member?(r, srch_key)
-    end
-  end
+  def member?({nil,_}, _search_key), do: false
+  def member?({{_,_,k,_,l,_},_}, srch_key) when srch_key < k, do: member?({l,nil},srch_key)
+  def member?({{_,_,k,_,_,r},_}, srch_key) when srch_key > k, do: member?({r,nil},srch_key)
+  def member?({{_,_,_,_,_,_},_}, _), do: true
 
 #--------------------------------------------------------------
 # Internals
@@ -223,6 +208,8 @@ defmodule Tree do
     when a >= 0 and b < 0, do:
       do_range(r, a, size + b)
   def range({r,_}, a..b)
+    when a > b, do: nil
+  def range({r,_}, a..b)
     when a >= 0 and b >= 0, do: do_range(r, a, b)
 
   defp do_range({_,h,k,v,l,r}, a, b) do
@@ -239,7 +226,7 @@ defmodule Tree do
       a == lc && b > lc ->
         [{k,v}] ++ do_range(r, 0, b-lc-1)
       a < lc && b == lc ->
-        do_range(l, a, 0) ++ [{k,v}]
+        do_range(l, a, b-1) ++ [{k,v}]
     end
   end
 
@@ -264,6 +251,7 @@ defmodule Tree do
         end
     end
   end
+
   defp left_count(1), do: 0
   defp left_count(0), do: 0
   defp left_count(h), do: :math.pow(2,h-1)-1 |> round
@@ -272,7 +260,7 @@ defmodule Tree do
   # filter range
 
   def filter_range({node,_}, min, max), do:
-    do_filter_range(node, min, max) |> from_list |> to_list |> Enum.reverse
+    do_filter_range(node, min, max) |> from_orddict |> to_list |> Enum.reverse
   defp do_filter_range(nil, _min, _max), do: []
   defp do_filter_range({_,_,k,v,l,r}, min, max) do
     cond do
@@ -362,9 +350,9 @@ defmodule Tree do
 
   defp do_balance_left(h, l, x, r, xv), do: {:black,h,x,xv,l,r}
 
-  defp do_balance_right(h, a, x, {:red,_,y,yv,b,{:red,_,z,zv,c,d}}, xv), do:
-    {:red,h+1,y,yv,{:black,h,x,xv,a,b},{:black,h,z,zv,c,d}}
   defp do_balance_right(h, a, x, {:red,_,z,zv,{:red,_,y,yv,b,c},d},xv), do:
+    {:red,h+1,y,yv,{:black,h,x,xv,a,b},{:black,h,z,zv,c,d}}
+  defp do_balance_right(h, a, x, {:red,_,y,yv,b,{:red,_,z,zv,c,d}}, xv), do:
     {:red,h+1,y,yv,{:black,h,x,xv,a,b},{:black,h,z,zv,c,d}}
   defp do_balance_right(h, l, x, r, xv), do: {:black,h,x,xv,l,r}
 
