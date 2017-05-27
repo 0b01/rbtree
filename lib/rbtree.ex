@@ -461,25 +461,27 @@ defmodule Tree do
   end
 
   defp do_delete(_, nil), do: {nil, false}
-  defp do_delete(x, {c,h,y,yv,l,r}) do
-    cond do
-      x < y ->
-        {do_l, d} = do_delete(x,l)
-        t = {c,h,y,yv,do_l,r}
-        if d do unbalanced_right(c, h-1, do_l, y, yv, r) else {t, false} end
-      x > y ->
-        {do_r, d} = do_delete(x,r)
-        t = {c,h,y,yv,l,do_r}
-        if d do unbalanced_left(c, h-1, l, y, yv, do_r) else {t, false} end
-      x == y ->
-        if r == nil do
-          if c == :black do blackify l else {l, false} end
-        else
-          {{do_r, d}, {m,v}} = do_delete_min r
-          t = {c,h,m,v,l,do_r}
-          if d do unbalanced_left(c, h-1, l, m, v, do_r) else {t, false} end
-        end
-    end
+
+  defp do_delete(x, {c,h,y,yv,l,r}) when x < y do
+    {do_l, d} = do_delete(x,l)
+    t = {c,h,y,yv,do_l,r}
+    if d do unbalanced_right(c, h-1, do_l, y, yv, r) else {t, false} end
+  end
+
+  defp do_delete(x, {c,h,y,yv,l,r}) when x > y do
+    {do_r, d} = do_delete(x,r)
+    t = {c,h,y,yv,l,do_r}
+    if d do unbalanced_left(c, h-1, l, y, yv, do_r) else {t, false} end
+  end
+
+  defp do_delete(x, {c,h,y,yv,l,r}) when x == y and r == nil do
+    if c == :black do blackify l else {l, false} end
+  end
+
+  defp do_delete(x, {c,h,y,yv,l,r}) when x == y do
+    {{do_r, d}, {m,v}} = do_delete_min r
+    t = {c,h,m,v,l,do_r}
+    if d do unbalanced_left(c, h-1, l, m, v, do_r) else {t, false} end
   end
 
 # ----------------------------------------------------------------
@@ -714,7 +716,6 @@ end
 
 defimpl Inspect, for: Tree do
   import Inspect.Algebra
-
   def inspect(tree, opts) do
     concat ["#Tree<", Inspect.List.inspect(Tree.to_list(tree), opts), ">"]
   end
