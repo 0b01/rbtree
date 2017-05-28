@@ -107,6 +107,7 @@ defmodule RbtreeTest do
   test "deletion" do
     tree = Tree.from_list(1..4 |> Enum.map(&Integer.to_string/1) |>Enum.to_list)
     assert tree |> delete(1) |> delete(2) |> size == 2
+    assert tree |> delete(1) |> delete(2) |> delete(3) |> delete(4) |>size == 0
 
     initial_tree = Tree.new([d: 1, b: 2, c: 3, a: 4])
     {_,s} = initial_tree

@@ -3,12 +3,14 @@ defmodule Rbtree.Mixfile do
 
   def project do
     [app: :rbtree,
-     version: "0.1.0",
+     version: "0.1.1",
      elixir: "~> 1.4",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      test_coverage: [tool: ExCoveralls],
      preferred_cli_env: ["coveralls": :test, "coveralls.detail": :test, "coveralls.post": :test, "coveralls.html": :test],
+     package: package(),
+     description: "This implements red black tree in Elixir.",
 
      deps: deps()]
   end
@@ -32,11 +34,17 @@ defmodule Rbtree.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [
-      {:dogma, "~> 0.1", only: :dev},
-      {:excoveralls, "~> 0.6", only: :test},
-      {:benchfella, "~> 0.3.0"},
-      {:exprof, "~> 0.2.0"},
-      {:rbdict, github: "rvirding/rb", app: false}
+      {:ex_doc, ">= 0.0.0", only: :dev}
+    ]
+  end
+
+  defp package do
+    [
+      name: :rbtree,
+      files: ["lib/rbtree.ex", "mix.exs", "README*"],
+      maintainers: ["Ricky Han"],
+      licenses: ["Apache 2.0"],
+      links: %{"GitHub" => "https://github.com/rickyhan/rbtree"}
     ]
   end
 end

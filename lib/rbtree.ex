@@ -13,10 +13,6 @@ defmodule Tree do
   Modified from Data.Set.RBtree package in Haskell.
   """
 
-  @type key :: any
-  @type value :: any
-  # @compile {:inline, fetch: 2, put: 3, delete: 2, has_key?: 2, replace!: 3}
-
   @behaviour Access
 # {node, size, comparator}
 #--------------------------------------------------------------
@@ -593,10 +589,10 @@ defmodule Tree do
 
 # ----------------------------------------------------------------
 
-  def delete({t,size,}, x) do
-    {s, _} = do_delete(x, t)
-    new_size = if s == nil do size else size - 1 end
-    {do_turn_black(s),new_size,}
+  def delete({t,size}, x) do
+    {s, bool} = do_delete(x, t)
+    new_size = if bool do size else size - 1 end
+    {do_turn_black(s), new_size}
   end
 
   defp do_delete(_, nil) do

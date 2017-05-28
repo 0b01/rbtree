@@ -9,12 +9,7 @@
 
 Rbtree is the underlying data structure for SortedMap and SortedSet. Elixir does not have either of these.(see proposal) Erlang has `gb_sets` and `gb_trees` which uses AA tree and are indeed very fast. According to [AA Tree](https://en.wikipedia.org/wiki/AA_tree#Performance) the performance of red-black tree should be similar.
 
-Todo:
-
-1. ~~Basic functionality~~
-2. Benchmark and optimize
-3. Add documentation
-4. Implement Wrapper modules SortedMap and SortedSet
+This module support nth(tree, n) and range(tree, a..b)
 
 ## Benchmark
 
