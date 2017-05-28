@@ -29,36 +29,53 @@ defmodule Tree do
     end
   end
 
-  def height({nil,_}), do: 0
-  def height({{_,h,_,_,_,_},_,_}), do: h
+  def height({nil,_}) do
+    0
+  end
 
-  def size({_,size}), do: size
+  def height({{_,h,_,_,_,_},_,_}) do
+    h
+  end
+
+  def size({_,size}) do
+    size
+  end
 
 #--------------------------------------------------------------
 
   # Create
-  def new(), do: empty()
+  def new() do
+    empty()
+  end
+
   def new(list)
-  def new(list) when is_list(list), do: from_list(list)
+  def new(list) when is_list(list) do
+    from_list(list)
+  end
 
   def empty() do
     {nil,0}
   end
 
   def singleton(key, value \\ nil)
-  def singleton(key, value), do:
+  def singleton(key, value) do
     {{:black, 1, key, value, nil, nil},1}
-
-  def from_list(list) when is_list(list) do
-    Enum.reduce(list, empty(), fn(k, set) ->
-      insert(set, k, nil)
-    end)
   end
 
-  def from_orddict(list) when is_list(list) do
-    Enum.reduce(list, empty(), fn({k,v}, set) ->
-      insert(set, k, v)
-    end)
+  def from_list(l, tree_acc \\ {nil, 0})
+  def from_list([], tree_acc) do
+    tree_acc
+  end
+  def from_list([h|t]=list, tree_acc) when is_list(list) do
+    from_list(t, insert(tree_acc, h, nil))
+  end
+
+  def from_orddict(list, tree_acc \\ {nil, 0})
+  def from_orddict([], tree_acc) do
+    tree_acc
+  end
+  def from_orddict([{k,v}|t]=list, tree_acc) when is_list(list) do
+    from_orddict(t, insert(tree_acc, k, v))
   end
 
 #--------------------------------------------------------------
@@ -75,13 +92,21 @@ defmodule Tree do
 #--------------------------------------------------------------
 
   def to_list(tree, acc \\ [])
-  def to_list({nil,_}, acc), do: acc
-  def to_list({node,_}, acc), do: do_to_list(node, acc) |> Enum.reverse
-  defp do_to_list(nil, acc), do: acc
-  defp do_to_list({_,_,k,v,l,r}, acc) when v == nil, do:
+  def to_list({nil,_}, acc) do
+    acc
+  end
+  def to_list({node,_}, acc) do
+    do_to_list(node, acc) |> Enum.reverse
+  end
+  defp do_to_list(nil, acc) do
+    acc
+  end
+  defp do_to_list({_,_,k,nil,l,r}, acc) do
     do_to_list(l, [k | do_to_list(r, acc)])
-  defp do_to_list({_,_,k,v,l,r}, acc), do:
+  end
+  defp do_to_list({_,_,k,v,l,r}, acc) do
     do_to_list(l, [ {k,v} | do_to_list(r, acc)])
+  end
 
 #--------------------------------------------------------------
 
@@ -115,21 +140,38 @@ defmodule Tree do
 
 #--------------------------------------------------------------
 
-  # def fetch({nil,_}, ks), do: false
-  def fetch({{_,_,k,_,l,_},_}, ks) when ks < k, do: fetch({l,nil}, ks)
-  def fetch({{_,_,k,_,_,r},_}, ks) when ks > k, do: fetch({r,nil}, ks)
-  def fetch({{_,_,_,v,_,_},_}, ks), do: v
+  def fetch({nil,_}, ks) do nil end
+  def fetch({{_,_,k,_,l,_},_}, ks) when ks < k do
+    fetch({l,nil}, ks)
+  end
+  def fetch({{_,_,k,_,_,r},_}, ks) when ks > k do
+    fetch({r,nil}, ks)
+  end
+  def fetch({{_,_,_,v,_,_},_}, _) do
+    v
+  end
 
-  def set(tree, key, value), do:
+  def set(tree, key, value) do
     insert(tree, key, value)
+  end
 #--------------------------------------------------------------
 
-  def has_key?(tree, key), do: member?(tree, key)
+  def has_key?(tree, key) do
+    member?(tree, key)
+  end
 
-  def member?({nil,_}, _search_key), do: false
-  def member?({{_,_,k,_,l,_},_}, srch_key) when srch_key < k, do: member?({l,nil},srch_key)
-  def member?({{_,_,k,_,_,r},_}, srch_key) when srch_key > k, do: member?({r,nil},srch_key)
-  def member?({{_,_,_,_,_,_},_}, _), do: true
+  def member?({nil,_}, _search_key) do
+    false
+  end
+  def member?({{_,_,k,_,l,_},_}, srch_key) when srch_key < k do
+    member?({l,nil},srch_key)
+  end
+  def member?({{_,_,k,_,_,r},_}, srch_key) when srch_key > k do
+    member?({r,nil},srch_key)
+  end
+  def member?({{_,_,_,_,_,_},_}, _) do
+    true
+  end
 
 #--------------------------------------------------------------
 # Internals
@@ -144,73 +186,113 @@ defmodule Tree do
   end
 
   defp blacks(n, acc \\ 0)
-  defp blacks(nil, acc), do: [acc + 1]
-  defp blacks({:black,_,_,_,l,r}, acc), do:
+  defp blacks(nil, acc) do
+    [acc + 1]
+  end
+  defp blacks({:black,_,_,_,l,r}, acc) do
     [blacks(l, acc + 1) | blacks(r, acc + 1)]
-
-  defp blacks({:red,_,_,_,l,r}, acc), do:
+  end
+  defp blacks({:red,_,_,_,l,r}, acc) do
     [blacks(l, acc) | blacks(r, acc)]
-
-  defp is_red_separate(t), do: reds(:black, t)
-
+  end
+  defp is_red_separate(t) do
+    reds(:black, t)
+  end
   defp reds(_color, nil), do: true
-  defp reds(:red, {:red,_,_,_,_,_}), do: false
-  defp reds(_color, {c,_,_,_,l,r}), do:
+  defp reds(:red, {:red,_,_,_,_,_}) do
+    false
+  end
+  defp reds(_color, {c,_,_,_,l,r}) do
     (reds c, l) && (reds c, r)
+  end
+
+
 
   defp ordered?(tree)
-  defp ordered?(tree), do: tree |> to_list |> Enum.reverse |> do_ordered()
+  defp ordered?(tree) do
+    tree |> to_list |> Enum.reverse |> do_ordered()
+  end
   defp do_ordered(list)
   defp do_ordered([]), do: true
   defp do_ordered([_]), do: true
   defp do_ordered([x|[y|_]=xs]), do: x<=y && do_ordered(xs)
 
   defp black_height(nil), do: true
-  defp black_height({:black,h,_,_,_,_}=t), do: do_black_height(t, h)
-  defp black_height(_), do: {:error, "black_height"}
-  defp do_black_height(nil, h), do: h == 0
-  defp do_black_height({:red,nh,_,_,l,r}, h), do:
+  defp black_height({:black,h,_,_,_,_}=t) do
+    do_black_height(t, h)
+  end
+  defp black_height(_) do
+    {:error, "black_height"}
+  end
+  defp do_black_height(nil, h) do
+    h == 0
+  end
+  defp do_black_height({:red,nh,_,_,l,r}, h) do
     (h == nh - 1) && do_black_height(l, h) && do_black_height(r, h)
-  defp do_black_height({:black,nh,_,_,l,r}, h), do:
+  end
+  defp do_black_height({:black,nh,_,_,l,r}, h) do
     (h == nh) && do_black_height(l, h - 1) && do_black_height(r, h - 1)
+  end
 
-  defp turn_red({_,h,k,v,l,r}), do: {:red,h,k,v,l,r}
-  defp turn_black({_,h,k,v,l,r}), do: {:black,h,k,v,l,r}
-  defp do_turn_black(nil), do: nil
-  defp do_turn_black(node), do: turn_black(node)
+  defp turn_red({_,h,k,v,l,r}) do
+    {:red,h,k,v,l,r}
+  end
+  defp turn_black({_,h,k,v,l,r}) do
+    {:black,h,k,v,l,r}
+  end
+  defp do_turn_black(nil) do
+    nil
+  end
+  defp do_turn_black(node) do
+    turn_black(node)
+  end
 
 #--------------------------------------------------------------
 
-  def minimum({_,_,k,v,nil,_}), do: {k, v}
-  def minimum({_,_,_,_,l,_}), do: minimum(l)
+  def minimum({_,_,k,v,nil,_}) do
+    {k, v}
+  end
+  def minimum({_,_,_,_,l,_}) do
+    minimum(l)
+  end
 
-  def maximum({_,_,k,v,_,nil}), do: {k, v}
-  def maximum({_,_,_,_,_,r}), do: maximum(r)
+  def maximum({_,_,k,v,_,nil}) do
+    {k, v}
+  end
+  def maximum({_,_,_,_,_,r}) do
+    maximum(r)
+  end
 
 #--------------------------------------------------------------
 
   def range({_,size}, a..b) when a > size - 1
-                                         or b > size - 1, do: nil
-  def range({_,_}=tree, a..b) when a == b, do: [nth(tree, a)]
-  def range({r,size}, a..b)
-    when a < 0 and b < 0, do:
-      do_range(r, size + a, size + b)
-  def range({r,size}, a..b)
-    when a < 0 and b >= 0 and b - (size + a) > 0, do:
-      do_range(r, size + a, b)
-  def range({_,size}=tree, a..b)
-    when a < 0 and b >= 0 and b - (size + a) == 0, do:
-      [nth(tree, b)]
-  def range({r,size}, a..b)
-    when a < 0 and b == 0, do:
-      do_range(r, size + a, size - 1)
-  def range({r,size}, a..b)
-    when a >= 0 and b < 0, do:
-      do_range(r, a, size + b)
-  def range({r,_}, a..b)
-    when a > b, do: nil
-  def range({r,_}, a..b)
-    when a >= 0 and b >= 0, do: do_range(r, a, b)
+                              or b > size - 1 do
+    nil
+  end
+  def range({_,_}=tree, a..b) when a == b do
+    [nth(tree, a)]
+  end
+  def range({r,size}, a..b) when a < 0 and b < 0 do
+    do_range(r, size + a, size + b)
+  end
+  def range({r,size}, a..b) when a < 0 and b >= 0 and b - (size + a) > 0 do
+    do_range(r, size + a, b)
+  end
+  def range({_,size}=tree, a..b) when a < 0 and b >= 0 and b - (size + a) == 0 do
+    [nth(tree, b)]
+  end
+  def range({r,size}, a..0) when a < 0 do
+    do_range(r, size + a, size - 1)
+  end
+  def range({r,size}, a..b) when a >= 0 and b < 0 do
+    do_range(r, a, size + b)
+  end
+  def range({_,_}, a..b) when a > b do
+    nil
+  end
+  def range({r,_}, a..b) when a >= 0 and b >= 0 do
+    do_range(r, a, b)
+  end
 
   defp do_range({_,h,k,v,l,r}, a, b) do
     lc = left_count(h)
@@ -232,59 +314,81 @@ defmodule Tree do
 
 #--------------------------------------------------------------
 
-  def nth({_,size}, n) when n > size - 1 or size == 0, do: nil
-  def nth({r,size}, n) when n < 0, do: do_nth(r, size + n)
-  def nth({r,_}, n) when n >= 0, do: do_nth(r, n)
+  def nth({_,0}, _n) do
+    nil
+  end
+  def nth({_,size}, n) when n > size - 1 do
+    nil
+  end
+  def nth({r,size}, n) when n < 0 do
+    do_nth(r, size + n)
+  end
+  def nth({r,_}, n) when n >= 0 do
+    do_nth(r, n)
+  end
+
   defp do_nth({_,h,k,v,l,r}, n) do
     l_count = left_count(h)
     cond do
-      l_count > n ->
-        case l do
-          nil -> {k,v}
-          _ -> do_nth(l, n)
-        end
+      l_count > n && l == nil -> {k,v}
+      l_count > n -> do_nth(l, n)
       l_count == n -> {k,v}
-      true ->
-        case r do
-          nil -> {k,v}
-          _ -> do_nth(r, n - l_count - 1)
-        end
+      r == nil -> {k,v}
+      true -> do_nth(r, n - l_count - 1)
     end
   end
 
-  defp left_count(1), do: 0
-  defp left_count(0), do: 0
-  defp left_count(h), do: :math.pow(2,h-1)-1 |> round
+  defp left_count(1) do
+    0
+  end
+  defp left_count(0) do
+    0
+  end
+  defp left_count(h) do
+    :math.pow(2,h-1)-1 |> round
+  end
 
 #--------------------------------------------------------------
   # filter range
 
-  def filter_range({node,_}, min, max), do:
-    do_filter_range(node, min, max) |> from_orddict |> to_list |> Enum.reverse
-  defp do_filter_range(nil, _min, _max), do: []
-  defp do_filter_range({_,_,k,v,l,r}, min, max) do
-    cond do
-      max == k && min == k -> [{k,v}]
-      k <= max && k >= min ->
-        [{k,v}] ++ do_filter_range(l, min, max) ++
-          do_filter_range(r, min, max)
-      k < min ->
-        do_filter_range(r, min, max)
-      true ->
-        do_filter_range(l, min, max)
-    end
+  def filter_range({node,_}, min, max) do
+    do_filter_range(node, min, max) |> Enum.map(fn {a,b} -> if b == nil do a else {a,b} end end)
+  end
+  defp do_filter_range(nil, _min, _max) do
+    []
+  end
+
+  defp do_filter_range({_,_,k,v,_,_}, min, max) when max == min and min == k do
+    [{k,v}]
+  end
+
+  defp do_filter_range({_,_,k,v,l,r}, min, max) when k >= min and k <= max do
+    do_filter_range(l, min, max) ++ [{k,v} | do_filter_range(r, min, max)]
+  end
+
+  defp do_filter_range({_,_,k,_,_,r}, min, max) when k < min do
+    do_filter_range(r, min, max)
+  end
+
+  defp do_filter_range({_,_,_,_,l,_}, min, max) do
+    do_filter_range(l, min, max)
   end
 
 #--------------------------------------------------------------
   # to_string
 
-  def to_string({tree,size}) , do: "\n(size:" <> Integer.to_string(size) <> ")\n" <> do_to_string "", tree
-  def do_to_string(_, nil), do: "\n"
-  def do_to_string(pref, {c,h,k,v,l,r}), do:
+  def to_string({tree,size}) do
+    "\n(size:" <> Integer.to_string(size) <> ")\n" <> do_to_string "", tree
+  end
+  def do_to_string(_, nil) do
+    "\n"
+  end
+  def do_to_string(pref, {c,h,k,v,l,r}) do
        Atom.to_string(c) <> " { " <> Kernel.inspect(k) <> ", " <> Kernel.inspect(v) <> " }(d:"
        <> Integer.to_string(h) <> ")\n"
     <> pref <> "+ " <> do_to_string(("  " <> pref), l)
     <> pref <> "+ " <> do_to_string(("  " <> pref), r)
+  end
 
 #--------------------------------------------------------------
 
@@ -300,17 +404,18 @@ defmodule Tree do
   ## Insertion
   #  Chris Okasaki
 
-  # def insert(tree, k), do: insert(tree, k, nil)
+  # def insert(tree, k) do insert(tree, k, nil) end
   def insert({node,size}, k, v) do
     {new_node, status} = do_insert(node, k, v)
     {_,h,k,v,l,r} = new_node
     new_node = {:black,h,k,v,l,r}
-    new_size = if status == :add do size + 1 else size end
-    {new_node,new_size}
+    new_size = if status == :add do size + 1 else size end # todo: might be slowing op down
+    {new_node, new_size}
   end
 
-  defp do_insert(nil, key, val), do:
+  defp do_insert(nil, key, val) do
     {{:red, 1, key, val, nil, nil}, :add}
+  end
 
   defp do_insert({:black,h,k,v,l,r}, kx, vx) when kx == k do
     status = if v == vx do :replace else :add end
@@ -342,19 +447,29 @@ defmodule Tree do
     {{:red, h, k, v, l, node}, status}
   end
 
-  defp do_balance_left(h, {:red,_,y,yv,{:red,_,x,xv,a,b},c}, z, d, zv), do:
+  defp do_balance_left(h, {:red,_,y,yv,{:red,_,x,xv,a,b},c}, z, d, zv) do
     {:red,h+1,y,yv,{:black,h,x,xv,a,b},{:black,h,z,zv,c,d}}
+  end
 
-  defp do_balance_left(h, {:red,_,x,xv,a,{:red,_,y,yv,b,c}},z ,d, zv), do:
+  defp do_balance_left(h, {:red,_,x,xv,a,{:red,_,y,yv,b,c}},z ,d, zv) do
     {:red,h+1,y,yv,{:black,h,x,xv,a,b},{:black,h,z,zv,c,d}}
+  end
 
-  defp do_balance_left(h, l, x, r, xv), do: {:black,h,x,xv,l,r}
+  defp do_balance_left(h, l, x, r, xv) do
+    {:black,h,x,xv,l,r}
+  end
 
-  defp do_balance_right(h, a, x, {:red,_,z,zv,{:red,_,y,yv,b,c},d},xv), do:
+  defp do_balance_right(h, a, x, {:red,_,z,zv,{:red,_,y,yv,b,c},d},xv) do
     {:red,h+1,y,yv,{:black,h,x,xv,a,b},{:black,h,z,zv,c,d}}
-  defp do_balance_right(h, a, x, {:red,_,y,yv,b,{:red,_,z,zv,c,d}}, xv), do:
+  end
+
+  defp do_balance_right(h, a, x, {:red,_,y,yv,b,{:red,_,z,zv,c,d}}, xv) do
     {:red,h+1,y,yv,{:black,h,x,xv,a,b},{:black,h,z,zv,c,d}}
-  defp do_balance_right(h, l, x, r, xv), do: {:black,h,x,xv,l,r}
+  end
+
+  defp do_balance_right(h, l, x, r, xv) do
+    {:black,h,x,xv,l,r}
+  end
 
   # # PEG.js parser
   # Start
@@ -374,72 +489,92 @@ defmodule Tree do
 
 #--------------------------------------------------------------
 
-  defp balance_left(:black, h, {:red,_,y,yv,{:red,_,x,xv,a,b},c}, z, v, d), do:
+  defp balance_left(:black, h, {:red,_,y,yv,{:red,_,x,xv,a,b},c}, z, v, d) do
     {:red,h+1,y,yv,{:black,h,x,xv,a,b},{:black,h,z,v,c,d,}}
-  defp balance_left(:black, h, {:red,_,x,xv,a,{:red,_,y,yv,b,c}}, z, v, d), do:
+  end
+  defp balance_left(:black, h, {:red,_,x,xv,a,{:red,_,y,yv,b,c}}, z, v, d) do
     {:red,h+1,y,yv,{:black,h,x,xv,a,b},{:black,z,v,c,d}}
-  defp balance_left(k, h, l, x, v, r), do:
+  end
+  defp balance_left(k, h, l, x, v, r) do
     {k,h,x,v,l,r}
+  end
 
-  defp balance_right(:black, h, a, x, v, {:red,_,y,yv,b,{:red,_,z,zv,c,d}}), do:
+  defp balance_right(:black, h, a, x, v, {:red,_,y,yv,b,{:red,_,z,zv,c,d}}) do
     {:red,h+1,y,yv,{:black,h,x,v,a,b},{:black,h,z,zv,c,d}}
-  defp balance_right(:black, h, a, x, v, {:red,_,z,zv,{:red,_,y,yv,b,c},d}), do:
+  end
+  defp balance_right(:black, h, a, x, v, {:red,_,z,zv,{:red,_,y,yv,b,c},d}) do
     {:red,h+1,y,yv,{:black,h,x,v,a,b},{:black,h,z,zv,c,d}}
-  defp balance_right(k, h, l, x, v, r), do:
+  end
+  defp balance_right(k, h, l, x, v, r) do
     {k,h,x,v,l,r}
+  end
 
 # ----------------------------------------------------------------
 
-  defp unbalanced_left(c, h, {:black,_,_,_,_,_}=l, x, v, r), do:
+  defp unbalanced_left(c, h, {:black,_,_,_,_,_}=l, x, v, r) do
     {balance_left(:black, h, (turn_red l), x, v, r), (c == :black)}
-  defp unbalanced_left(:black, h, {:red,lh,lx,lxv,ll,{:black,_,_,_,_,_}=lr}, x, v, r), do:
+  end
+  defp unbalanced_left(:black, h, {:red,lh,lx,lxv,ll,{:black,_,_,_,_,_}=lr}, x, v, r) do
     {{:black,lh,lx,lxv,ll,balance_left(:black, h, turn_red(lr), x, v, r)}, false}
-  defp unbalanced_right(c, h ,l, x, v,{:black,_,_,_,_,_}=r), do:
+  end
+  defp unbalanced_right(c, h ,l, x, v,{:black,_,_,_,_,_}=r) do
     {balance_right(:black, h, l, x, v, turn_red(r)), c == :black}
-  defp unbalanced_right(:black, h, l, x, v, {:red,rh,rx,rxv,{:black,_,_,_,_,_,_}=rl,rr}), do:
+  end
+  defp unbalanced_right(:black, h, l, x, v, {:red,rh,rx,rxv,{:black,_,_,_,_,_,_}=rl,rr}) do
     {{:black,rh,rx,rxv,balance_right(:black, h, l, x, v, turn_red(rl)),rr}, false}
+  end
 
 # ----------------------------------------------------------------
 
-  def delete_min({nil,_}), do: empty()
+  def delete_min({nil,_}) do
+    empty()
+  end
   def delete_min({t,size}) do
     {{s, _}, _} = do_delete_min t
     {do_turn_black(s),size - 1}
   end
 
-  defp do_delete_min(nil), do: throw("error")
-  defp do_delete_min({:black,_,x,v,nil,nil}), do:
+  defp do_delete_min(nil) do
+    throw("error")
+  end
+  defp do_delete_min({:black,_,x,v,nil,nil}) do
     {{nil, true}, {x,v}}
-  defp do_delete_min({:black,_,x,v,nil,{:red,_,_,_,_,_}=r}), do:
+  end
+  defp do_delete_min({:black,_,x,v,nil,{:red,_,_,_,_,_}=r}) do
     {{turn_black(r), false}, {x,v}}
-  defp do_delete_min({:red,_,x,v,nil,r}), do:
+  end
+  defp do_delete_min({:red,_,x,v,nil,r}) do
     {{r, false}, {x,v}}
+  end
   defp do_delete_min({c,h,x,v,l,r}) do
     {{do_l, d}, m} = do_delete_min l
     tD = unbalanced_right(c, (h-1), do_l, x, v, r)
     do_tD = {{c,h,x,v,do_l,r}, false}
-    if d do
-      {tD, m}
-    else
-      {do_tD, m}
-    end
+    if d do {tD, m} else {do_tD, m} end
   end
 
 # ----------------------------------------------------------------
 
-  def delete_max({nil,_,_}), do: empty()
+  def delete_max({nil,_,_}) do
+    empty()
+  end
   def delete_max({t,size}) do
     {{s, _},_} = do_delete_max t
     {do_turn_black(s), size - 1}
   end
 
-  defp do_delete_max(nil), do: throw("do_delete_max")
-  defp do_delete_max({{:black,_,x,_,nil,nil}}), do:
+  defp do_delete_max(nil) do
+    throw("do_delete_max")
+  end
+  defp do_delete_max({{:black,_,x,_,nil,nil}}) do
     {{nil, true}, x}
-  defp do_delete_max({:black,_,x,_,{:red,_,_,_,_,_}=l,nil}), do:
+  end
+  defp do_delete_max({:black,_,x,_,{:red,_,_,_,_,_}=l,nil}) do
     {{turn_black(l), false}, x}
-  defp do_delete_max({:red,_,x,_,l,nil}), do:
+  end
+  defp do_delete_max({:red,_,x,_,l,nil}) do
     {{l, false}, x}
+  end
   defp do_delete_max({c,h,x,v,l,r}) do
     {{do_r, d}, m} = do_delete_max r
     tD  = unbalanced_left(c, (h-1), l, x, v, do_r)
@@ -449,8 +584,12 @@ defmodule Tree do
 
 # ----------------------------------------------------------------
 
-  defp blackify({:red,_,_,_,_,_}=s), do: {turn_black(s), false}
-  defp blackify(s), do: {s, true}
+  defp blackify({:red,_,_,_,_,_}=s) do
+    {turn_black(s), false}
+  end
+  defp blackify(s) do
+    {s, true}
+  end
 
 # ----------------------------------------------------------------
 
@@ -460,7 +599,9 @@ defmodule Tree do
     {do_turn_black(s),new_size,}
   end
 
-  defp do_delete(_, nil), do: {nil, false}
+  defp do_delete(_, nil) do
+    {nil, false}
+  end
 
   defp do_delete(x, {c,h,y,yv,l,r}) when x < y do
     {do_l, d} = do_delete(x,l)
@@ -474,11 +615,11 @@ defmodule Tree do
     if d do unbalanced_left(c, h-1, l, y, yv, do_r) else {t, false} end
   end
 
-  defp do_delete(x, {c,h,y,yv,l,r}) when x == y and r == nil do
+  defp do_delete(x, {c,_h,y,_yv,l,nil}) when x == y do
     if c == :black do blackify l else {l, false} end
   end
 
-  defp do_delete(x, {c,h,y,yv,l,r}) when x == y do
+  defp do_delete(x, {c,h,y,_yv,l,r}) when x == y do
     {{do_r, d}, {m,v}} = do_delete_min r
     t = {c,h,m,v,l,do_r}
     if d do unbalanced_left(c, h-1, l, m, v, do_r) else {t, false} end
@@ -490,8 +631,12 @@ defmodule Tree do
 # -- Set operations
 # ----------------------------------------------------------------
 
-  def join(nil, k, t2), do: insert(k, t2, nil)
-  def join(t1, k, nil), do: insert(k, t1, nil)
+  def join(nil, k, t2) do
+    insert(k, t2, nil)
+  end
+  def join(t1, k, nil) do
+    insert(k, t1, nil)
+  end
   def join(t1, k, t2) do
     h1 = height t1
     h2 = height t2
@@ -524,8 +669,12 @@ defmodule Tree do
 
 # ----------------------------------------------------------------
 
-  def merge(nil, t2), do: t2
-  def merge(t1, nil), do: t1
+  def merge(nil, t2) do
+    t2
+  end
+  def merge(t1, nil) do
+    t1
+  end
   def merge(t1, t2) do
     h1 = height t1
     h2 = height t2
@@ -553,7 +702,9 @@ defmodule Tree do
     end
   end
 
-  defp merge_eq(nil, nil), do: nil
+  defp merge_eq(nil, nil) do
+    nil
+  end
   defp merge_eq({_,h,x,v,l,r}=t1, t2) do
     {mk,mv}  = minimum t2
     do_t2 = delete_min t2
@@ -571,13 +722,19 @@ defmodule Tree do
     end
   end
 
-  defp is_red({:red,_,_,_,_,_}), do: true
-  defp is_red(_), do: false
+  defp is_red({:red,_,_,_,_,_}) do
+    true
+  end
+  defp is_red(_) do
+    false
+  end
 
 
 # ----------------------------------------------------------------
 
-  def split(_, nil), do: {nil, nil}
+  def split(_, nil) do
+    {nil, nil}
+  end
   def split(kx, {_,_,k,_,l,r}) do
     cond do
       kx < k ->
@@ -593,8 +750,12 @@ defmodule Tree do
 
 # ----------------------------------------------------------------
 
-  def union(t1, nil), do: t1
-  def union(nil, t2), do: turn_black(t2)
+  def union(t1, nil) do
+    t1
+  end
+  def union(nil, t2) do
+    turn_black(t2)
+  end
   def union(t1, {_,_,k,_,l,r}) do
     {do_l, do_r} = split(k, t1)
     join((union do_l, l), k, (union do_r, r))
@@ -602,8 +763,12 @@ defmodule Tree do
 
 # ----------------------------------------------------------------
 
-  def intersection(nil, _), do: nil
-  def intersection(_, nil), do: nil
+  def intersection(nil, _) do
+    nil
+  end
+  def intersection(_, nil) do
+    nil
+  end
   def intersection(t1, {_,_,k,_,l,r}) do
     {do_l, do_r} = split(k, t1)
     if (member?(k, t1)) do
@@ -615,8 +780,12 @@ defmodule Tree do
 
 # ----------------------------------------------------------------
 
-  def difference(nil, _), do: nil
-  def difference(t1, nil), do: t1
+  def difference(nil, _) do
+    nil
+  end
+  def difference(t1, nil) do
+    t1
+  end
   def difference(t1, {_,_,k,_,l,r}) do
     {do_l, do_r} = split k, t1
     merge((difference(do_l, l)), (difference(do_r, r)))
@@ -636,7 +805,6 @@ defmodule Tree do
   def reduce_nodes(order, {root,_,_}, acc, fun) do
     do_reduce_nodes(order, root, acc, fun)
   end
-
 
   defp do_reduce_nodes(_order, nil, acc, _fun) do
     acc
@@ -698,25 +866,25 @@ defmodule Tree do
 end
 
 
-defimpl Enumerable, for: Tree do
-  def count({_,size,_}), do: size
-  def member?({_,_,_}=tree, key), do: Tree.has_key?(tree, key)
-  def reduce(tree, acc, fun), do: Tree.reduce(tree, acc, fun)
-end
+# defimpl Enumerable, for: Tree do
+#   def count({_,size,_}) do size end
+#   def member?({_,_,_}=tree, key) do Tree.has_key?(tree, key) end
+#   def reduce(tree, acc, fun) do Tree.reduce(tree, acc, fun) end
+# end
 
-defimpl Collectable, for: Tree do
-  def into(original) do
-    {original, fn
-      tree, {:cont, {key, value}} -> Tree.insert(tree, key, value)
-      tree, :done -> tree
-      _, :halt -> :ok
-    end}
-  end
-end
+# defimpl Collectable, for: Tree do
+#   def into(original) do
+#     {original, fn
+#       tree, {:cont, {key, value}} -> Tree.insert(tree, key, value)
+#       tree, :done -> tree
+#       _, :halt -> :ok
+#     end}
+#   end
+# end
 
-defimpl Inspect, for: Tree do
-  import Inspect.Algebra
-  def inspect(tree, opts) do
-    concat ["#Tree<", Inspect.List.inspect(Tree.to_list(tree), opts), ">"]
-  end
-end
+# defimpl Inspect, for: Tree do
+#   import Inspect.Algebra
+#   def inspect(tree, opts) do
+#     concat ["#Tree<", Inspect.List.inspect(Tree.to_list(tree), opts), ">"]
+#   end
+# end

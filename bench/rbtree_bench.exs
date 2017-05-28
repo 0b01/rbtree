@@ -49,7 +49,7 @@ defmodule Tree.Bench do
 # # -------------------------
 
   bench "Tree: delete", [words: words()] do
-      IO.inspect Tree.delete(@tree, "abbe")
+      Tree.delete(@tree, "abbe")
   end
 
   bench "rbdict: delete", [words: words()] do
@@ -61,9 +61,7 @@ defmodule Tree.Bench do
   # end
 
   bench "gbtrees: delete", [words: words()] do
-    for {i, _} <- words do
-      :gb_trees.delete_any("abbe" , @gbtrees)
-    end
+    :gb_trees.delete_any("abbe" , @gbtrees)
   end
 
 # # -------------------------
