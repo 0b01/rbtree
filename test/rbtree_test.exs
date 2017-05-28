@@ -49,6 +49,11 @@ defmodule RbtreeTest do
     assert 2 == s
   end
 
+  test "filter_range by value" do
+    red_black_tree = Tree.from_orddict [{"test", 0},{"example", 11}]
+    assert [{"test", 0}, {"example", 11}] == red_black_tree |> filter_range_by_value(0,100)
+  end
+
 
   # test "strict equality" do
   #   tree = Tree.new([{1, :bubbles}])
@@ -128,7 +133,7 @@ defmodule RbtreeTest do
 
   test "nth 1..4" do
     tree = Tree.from_list(1..4 |> Enum.map(&({&1,&1})) |> Enum.to_list)
-    IO.puts tree |> Tree.to_string
+    # IO.puts tree |> Tree.to_string
   end
 
   test "get the nth element from the tree" do

@@ -345,6 +345,13 @@ defmodule Tree do
   end
 
 #--------------------------------------------------------------
+  # filter range by value
+
+  def filter_range_by_value(tree, min, max) do
+    to_list(tree) |> Enum.filter(fn {_,v} -> v >= min && v <= max end)
+  end
+
+#--------------------------------------------------------------
   # filter range
 
   def filter_range({node,_}, min, max) do
