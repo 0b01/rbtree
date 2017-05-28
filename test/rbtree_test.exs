@@ -153,22 +153,22 @@ defmodule RbtreeTest do
 
   test "get range a..b" do
     tree = Tree.from_list(1..40 |> Enum.to_list)
-    assert [{1, nil}] == tree |> range(0..0)
-    assert [{40, nil}] == tree |> range(-1..0)
-    # assert [{1, nil}, {2, nil}, {3, nil}, {4, nil}] == tree |> range(0..-1)
-    assert nil == tree |> range(10..1)
-    assert nil == tree |> range(0..1000)
-    assert [{1, nil},{2, nil}] == tree |> range(0..1)
-    assert [{1, nil},{2, nil},{3,nil}] == tree |> range(0..2)
-    assert [{1, nil},{2, nil},{3, nil}, {4, nil}] == tree |> range(0..3)
-    assert [{2, nil},{3,nil},{4,nil}] == tree |> range(1..3)
+    assert [{1, nil}] == tree |> range(0, 0)
+    assert [{40, nil}] == tree |> range(-1, 0)
+    # assert [{1, nil}, {2, nil}, {3, nil}, {4, nil}] == tree |> range(0, -1)
+    assert nil == tree |> range(10, 1)
+    assert nil == tree |> range(0, 1000)
+    assert [{1, nil},{2, nil}] == tree |> range(0, 1)
+    assert [{1, nil},{2, nil},{3,nil}] == tree |> range(0, 2)
+    assert [{1, nil},{2, nil},{3, nil}, {4, nil}] == tree |> range(0, 3)
+    assert [{2, nil},{3,nil},{4,nil}] == tree |> range(1, 3)
 
     # IO.inspect tree |> range(1..100)
 
     k = 100
     tree = Tree.from_list(1..k |> Enum.to_list)
     assert 100 == tree |> size
-    assert tree |> range((-2)..(-1)) == [{99, nil}, {100, nil}]
+    assert tree |> range((-2), (-1)) == [{99, nil}, {100, nil}]
 
 
     # Comprehensive testing
@@ -179,7 +179,7 @@ defmodule RbtreeTest do
         if j > i do
           tree = Tree.from_list( 1..j |> Enum.to_list )
           left = i..j |> Enum.reduce([], fn i,acc ->  acc ++ [{i,nil}] end)
-          right = tree |> range((i-1)..(j-1))
+          right = tree |> range((i-1),(j-1))
           assert left == right
         end
       end

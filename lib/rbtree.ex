@@ -261,32 +261,32 @@ defmodule Tree do
 
 #--------------------------------------------------------------
 
-  def range({_,size}, a..b) when a > size - 1
+  def range({_,size}, a, b) when a > size - 1
                               or b > size - 1 do
     nil
   end
-  def range({_,_}=tree, a..b) when a == b do
+  def range({_,_}=tree, a, b) when a == b do
     [nth(tree, a)]
   end
-  def range({r,size}, a..b) when a < 0 and b < 0 do
+  def range({r,size}, a, b) when a < 0 and b < 0 do
     do_range(r, size + a, size + b)
   end
-  def range({r,size}, a..b) when a < 0 and b >= 0 and b - (size + a) > 0 do
+  def range({r,size}, a, b) when a < 0 and b >= 0 and b - (size + a) > 0 do
     do_range(r, size + a, b)
   end
-  def range({_,size}=tree, a..b) when a < 0 and b >= 0 and b - (size + a) == 0 do
+  def range({_,size}=tree, a, b) when a < 0 and b >= 0 and b - (size + a) == 0 do
     [nth(tree, b)]
   end
-  def range({r,size}, a..0) when a < 0 do
+  def range({r,size}, a, 0) when a < 0 do
     do_range(r, size + a, size - 1)
   end
-  def range({r,size}, a..b) when a >= 0 and b < 0 do
+  def range({r,size}, a, b) when a >= 0 and b < 0 do
     do_range(r, a, size + b)
   end
-  def range({_,_}, a..b) when a > b do
+  def range({_,_}, a, b) when a > b do
     nil
   end
-  def range({r,_}, a..b) when a >= 0 and b >= 0 do
+  def range({r,_}, a, b) when a >= 0 and b >= 0 do
     do_range(r, a, b)
   end
 
