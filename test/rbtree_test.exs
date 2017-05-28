@@ -125,6 +125,11 @@ defmodule RbtreeTest do
     # assert not Tree.has_key?(Tree.new([a: 1, b: 2]), :c)
   end
 
+  test "nth 1..4" do
+    tree = Tree.from_list(1..4 |> Enum.map(&({&1,&1})) |> Enum.to_list)
+    IO.puts tree |> Tree.to_string
+  end
+
   test "get the nth element from the tree" do
     range = 1..10
     tree = Tree.from_list(range |>  Enum.map(&({&1, &1})) |>Enum.to_list)
