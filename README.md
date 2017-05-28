@@ -22,39 +22,48 @@ The following benchmark is generated from `mix bench` to run the benchmark in `b
 
 Run `mix tree.prof` to profile a specific function defined in `lib/mix/tasks/rb.prof.ex`
 
+# Benchmark
+
+Using `mix bench -d 0.1`
+
 ```
 benchmark name             iterations   average time
-Tree: get size                1000000   0.02 µs/op
-gbsets: get size              1000000   0.02 µs/op
-gb_trees: get size            1000000   0.02 µs/op
-rbdict: get size                  500   33.79 µs/op
 
-rbdict: is_element            1000000   0.09 µs/op
-gbtrees: is_defined           1000000   0.09 µs/op
-gbsets: is_element             100000   0.11 µs/op
-Tree: is_element               100000   0.19 µs/op
+Tree: get size               10000000   0.01 µs/op
+gbsets: get size             10000000   0.01 µs/op
+gb_trees: get size           10000000   0.02 µs/op
+rbdict: get size                10000   17.85 µs/op
 
-rbdict: lookup                    100   146.07 µs/op
-gbtrees: lookup                   100   196.36 µs/op
-Tree: lookup                       50   398.28 µs/op
+rbdict: is_element           10000000   0.06 µs/op
+gbtrees: is_defined          10000000   0.07 µs/op
+gbsets: is_element           10000000   0.07 µs/op
+Tree: is_element              1000000   0.12 µs/op
 
-gbtrees: delete                100000   0.36 µs/op
-Tree: delete                    10000   2.82 µs/op
-rbdict: delete                  20000   3.73 µs/op
+gbtrees: delete               1000000   0.28 µs/op
+rbdict: delete                 100000   1.30 µs/op
+Tree: delete                   100000   1.37 µs/op
 
-gbsets: to_list                  1000   38.92 µs/op
-Tree: to_list                    1000   47.09 µs/op
-rbdict: to_list                   500   59.77 µs/op
-gbtrees: to_list                  200   87.36 µs/op
+gbsets: to_list                 10000   12.08 µs/op
+Tree: to_list                   10000   19.17 µs/op
+gbtrees: to_list                 5000   31.94 µs/op
+rbdict: to_list                  5000   32.04 µs/op
 
-gb_trees: new from_list           500   95.28 µs/op
-gb_sets: new from_list            100   146.88 µs/op
-rbdict: new from_list              50   949.64 µs/op
-Tree: new from_list                10   1769.70 µs/op
+gbtrees: lookup                  2000   96.47 µs/op
+rbdict: lookup                   1000   115.38 µs/op
+Tree: lookup                     1000   196.22 µs/op
 
-gb_trees: words from_list          10   2206.50 µs/op
-gb_sets: words from_list           10   2982.90 µs/op
-Tree: words from_orddict            1   16201.00 µs/op
-rbdict: words from_list             1   17812.00 µs/op
+gb_trees: new from_list          5000   58.64 µs/op
+gb_sets: new from_list           5000   66.36 µs/op
+rbdict: new from_list             500   482.26 µs/op
+Tree: new from_list               200   954.50 µs/op
+
+gb_trees: words from_list         500   304.65 µs/op
+gb_sets: words from_list          500   559.94 µs/op
+rbdict: words from_list            50   6051.94 µs/op
+Tree: words from_orddict           20   8953.30 µs/op
+
+Tree: range                  10000000   0.03 µs/op
+Tree: nth                     1000000   0.96 µs/op
+
 ```
 
