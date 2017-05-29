@@ -3,11 +3,15 @@
 [![Coverage Status](https://coveralls.io/repos/github/rickyhan/rbtree/badge.svg?branch=master)](https://coveralls.io/github/rickyhan/rbtree?branch=master)
 [![Deps Status](https://beta.hexfaktor.org/badge/all/github/rickyhan/rbtree.svg)](https://beta.hexfaktor.org/github/rickyhan/rbtree)
 
-## [Proposal](https://groups.google.com/forum/#!topic/elixir-lang-core/hjIW1FC-xBw)
+Ordinal access to a sorted treemap and treeset in 100% Elixir. Ported from then modified Haskell Data.Set.RBtree.
 
-## 
+# See also:
 
-Ordinal access to a sorted treemap and treeset 100% Elixir
+* [aatree](https://github.com/rickyhan/aatree)
+  AA Tree in Elixir. Ported from Erlang gb_trees.
+
+* [zset](https://github.com/rickyhan/zset)
+  Sorted Set with Redis API.
 
 ## Example
 
