@@ -51,7 +51,8 @@ defmodule RbtreeTest do
 
   test "filter_range by value" do
     red_black_tree = Tree.from_orddict [{"test", 0},{"example", 11}]
-    assert [{"test", 0}, {"example", 11}] == red_black_tree |> filter_range_by_value(0,100)
+    assert [{"test", 0}, {"example", 11}] == red_black_tree |> filter_range_by_value(0, 11, true, true)
+    assert [{"test", 0}] == red_black_tree |> filter_range_by_value(0, 11, true, false)
   end
 
 
@@ -231,6 +232,12 @@ defmodule RbtreeTest do
     end
   end
 
+  test "index" do
+    for i <- 1..16 do
+      tree = Tree.from_orddict(1..i |>  Enum.map(&({&1, &1})) |>Enum.to_list)
+      assert i - 1 == tree |> index(i)
+    end
+  end
 
 
 end

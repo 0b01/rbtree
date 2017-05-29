@@ -136,6 +136,18 @@ defmodule Tree do
 
 #--------------------------------------------------------------
 
+  def index({{_,_,k,_,l,_},_}, ks) when ks < k do
+    index({l,nil}, ks)
+  end
+  def index({{_,h,k,_,_,r},_}, ks) when ks > k do
+    index({r,nil}, ks) + left_count(h) + 1
+  end
+  def index({{_,h,_,_,_,_},_}, _) do
+    left_count(h)
+  end
+
+#--------------------------------------------------------------
+
   def fetch({nil,_}, ks) do nil end
   def fetch({{_,_,k,_,l,_},_}, ks) when ks < k do
     fetch({l,nil}, ks)
@@ -300,9 +312,9 @@ defmodule Tree do
       a > lc && b > lc ->
         do_range(r, a-lc-1, b-lc-1)
       a < lc && b > lc ->
-        do_range(l, a, lc - 1) ++ [{k,v}] ++ do_range(r, 0, b-lc-1)
+        do_range(l, a, lc - 1) ++ [{k,v} | do_range(r, 0, b-lc-1)]
       a == lc && b > lc ->
-        [{k,v}] ++ do_range(r, 0, b-lc-1)
+        [{k,v} | do_range(r, 0, b-lc-1)]
       a < lc && b == lc ->
         do_range(l, a, b-1) ++ [{k,v}]
     end
@@ -347,34 +359,40 @@ defmodule Tree do
 #--------------------------------------------------------------
   # filter range by value
 
-  def filter_range_by_value(tree, min, max) do
-    to_list(tree) |> Enum.filter(fn {_,v} -> v >= min && v <= max end)
+  def filter_range_by_value(tree, min, max, l_inc \\ true, r_inc \\ true) do
+    to_list(tree) |> Enum.filter(fn {_,v} ->
+         ((l_inc && v >= min) || (!l_inc && v > min))
+      && ((r_inc && v <= max) || (!r_inc && v < max))
+    end)
   end
 
 #--------------------------------------------------------------
   # filter range
 
-  def filter_range({node,_}, min, max) do
-    do_filter_range(node, min, max) |> Enum.map(fn {a,b} -> if b == nil do a else {a,b} end end)
+  def filter_range({node,_}, min, max, l_inc \\ true, r_inc \\ true) do
+    do_filter_range(node, min, max, l_inc, r_inc) |> Enum.map(fn {a,b} -> if b == nil do a else {a,b} end end)
   end
-  defp do_filter_range(nil, _min, _max) do
+
+  defp do_filter_range(nil, _min, _max, l_inc, r_inc) do
     []
   end
 
-  defp do_filter_range({_,_,k,v,_,_}, min, max) when max == min and min == k do
+  defp do_filter_range({_,_,k,v,_,_}, min, max, l_inc, r_inc) when max == min and min == k do
     [{k,v}]
   end
 
-  defp do_filter_range({_,_,k,v,l,r}, min, max) when k >= min and k <= max do
-    do_filter_range(l, min, max) ++ [{k,v} | do_filter_range(r, min, max)]
+  defp do_filter_range({_,_,k,v,l,r}, min, max, l_inc, r_inc)
+    when ((l_inc and k >= min) or (not l_inc and k > min))
+     and ((r_inc and k <= max) or (not r_inc and k < max)) do
+    do_filter_range(l, min, max, l_inc, r_inc) ++ [{k,v} | do_filter_range(r, min, max, l_inc, r_inc)]
   end
 
-  defp do_filter_range({_,_,k,_,_,r}, min, max) when k < min do
-    do_filter_range(r, min, max)
+  defp do_filter_range({_,_,k,_,_,r}, min, max, l_inc, r_inc) when k < min do
+    do_filter_range(r, min, max, l_inc, r_inc)
   end
 
-  defp do_filter_range({_,_,_,_,l,_}, min, max) do
-    do_filter_range(l, min, max)
+  defp do_filter_range({_,_,_,_,l,_}, min, max, l_inc, r_inc) do
+    do_filter_range(l, min, max, l_inc, r_inc)
   end
 
 #--------------------------------------------------------------
