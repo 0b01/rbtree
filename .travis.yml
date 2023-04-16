@@ -10,3 +10,5 @@ env:
 script:
   - mix test --trace
   - mix coveralls.travis
+
+# Added comment - 
